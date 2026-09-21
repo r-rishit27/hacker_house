@@ -54,16 +54,33 @@ log "swap"
 # 1 GiB of RAM and no swap: pip resolving numpy and the retriever warming
 # 5,611 vectors are both fine in steady state and both spike. 2 GiB of swap on
 # the root volume costs nothing and turns an OOM kill into a slow minute.
-if [[ -z "$(swapon --show)" ]] && [[ ! -f /swapfile ]]; then
-    fallocate -l 2G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048 status=none
+#
+# The whole block is best-effort. Swap is an improvement, not a requirement,
+# and a machine that will not take a swapfile is not a reason to abandon a
+# provision that would otherwise succeed — hence the `|| true` rather than
+# letting `set -e` end the script here.
+#
+# Note the absence of `mkswap -q`: util-linux on AL2023 has no such flag, and
+# the only thing it buys elsewhere is silence.
+add_swap() {
+    if [[ -n "$(swapon --show)" ]]; then
+        echo "swap already active; leaving it alone"
+        return 0
+    fi
+    # A /swapfile that exists but is not active is the debris of an earlier
+    # run that died between allocating and enabling. Format and enable it
+    # rather than skipping, which would leave 2 GiB allocated and unused.
+    if [[ ! -f /swapfile ]]; then
+        fallocate -l 2G /swapfile 2>/dev/null \
+            || dd if=/dev/zero of=/swapfile bs=1M count=2048 status=none
+    fi
     chmod 600 /swapfile
-    mkswap -q /swapfile
+    mkswap /swapfile >/dev/null
     swapon /swapfile
     grep -q '^/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
-    echo "2 GiB swap added"
-else
-    echo "swap already present; leaving it alone"
-fi
+    echo "2 GiB swap active"
+}
+add_swap || echo "could not add swap; continuing without it" >&2
 
 log "service account"
 if ! id sentinel >/dev/null 2>&1; then
