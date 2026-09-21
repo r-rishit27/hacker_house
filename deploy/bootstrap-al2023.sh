@@ -113,7 +113,18 @@ sudo -u sentinel "${VENV_DIR}/bin/pip" install --quiet -r "${APP_DIR}/backend/re
 sudo -u sentinel "${VENV_DIR}/bin/pip" install --quiet --no-deps -e "${APP_DIR}/backend"
 
 log "writable state"
-install -d -o sentinel -g sentinel "${APP_DIR}/backend/var/corpus" "${APP_DIR}/runs"
+# Create each directory in its own call and then chown the trees.
+#
+# `install -d -o sentinel -g sentinel a/b/c` does NOT do what it looks like it
+# does: it creates the intermediate directories too, but applies the ownership
+# only to the leaf. Asking for .../backend/var/corpus in one call left
+# .../backend/var owned by root, and SQLite then failed to open the database
+# with "unable to open database file" — a permissions error that reads like a
+# path error and sent the first debug in entirely the wrong direction.
+install -d -o sentinel -g sentinel "${APP_DIR}/backend/var"
+install -d -o sentinel -g sentinel "${APP_DIR}/backend/var/corpus"
+install -d -o sentinel -g sentinel "${APP_DIR}/runs"
+chown -R sentinel:sentinel "${APP_DIR}/backend/var" "${APP_DIR}/runs"
 
 log "credentials"
 install -d -m 0750 -o root -g sentinel /etc/sentinel

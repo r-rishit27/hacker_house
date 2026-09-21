@@ -265,6 +265,22 @@ your shell history or in `ps`.
 **The service will not start and the log says five fields are missing.** That
 is the design. Fill in `/etc/sentinel/sentinel.env`.
 
+**A setting fails to parse and the value in the error has a comment glued to
+the end of it** — `max_concurrent_investigations ... input_value='4# TigerGraph
+Savanna...'`. The env file was appended to without a trailing newline, so the
+first pasted line joined the last existing one. Fix that single line; the rest
+of the file is fine, and duplicate keys are harmless because systemd lets the
+later definition win — which is what makes "paste your real values at the
+bottom" a working way to fill the template in.
+
+**`sqlite3.OperationalError: unable to open database file`.** A permissions
+error wearing a path error's clothes. Check the owner of
+`/opt/sentinel/app/backend/var` — it must be `sentinel`, and the fix is
+`sudo chown -R sentinel:sentinel /opt/sentinel/app/backend/var`. The systemd
+sandbox is usually blamed first and is usually innocent; to rule it in or out,
+run the same `touch` under `systemd-run` with the unit's `ProtectSystem` and
+`ReadWritePaths` and see whether it also fails.
+
 **Paths point at nothing — no cases, an empty ring view, a database in a
 strange place.** The package was installed without `-e`. `Settings.ROOT` is
 the settings module's own path up three directories, and a regular install
