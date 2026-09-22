@@ -2,6 +2,8 @@
 
 ## Our build for the TigerGraph Agentic Fraud Investigation challenge at Hacker House Goa: facts from GSQL, belief from a calibrated ledger, decisions from a policy engine no prompt can override
 
+*By **Team CollabUp**: Rishit Rastogi and Subhash Bishnoi*
+
 A fraud analyst gets an alert. It says a transaction scored 0.90, and nothing else.
 
 To decide what to do, they open six systems:
@@ -172,6 +174,26 @@ Every finished answer then passes two checks:
 - a graph identity checker proves every id exists in the graph and re-checks the exposure against the graph to within two cents
 
 An answer that fails is quarantined in `runs/` and never reaches `cases/`.
+
+### The tech stack
+
+![The Sentinel tech stack, top to bottom: a Next.js 15 analyst console on AWS Amplify; a FastAPI API on AWS EC2 behind nginx; the Python agent and domain; the OpenAI models gpt-5.4-mini for reasoning and text-embedding-3-large for embeddings; TigerGraph Savanna 4.2.5 with 26 installed GSQL queries and the TigerGraph MCP server; and the offline data and quality tooling](https://raw.githubusercontent.com/r-rishit27/hacker_house/sentinel-v2/docs/medium/img/tech-stack.png)
+
+Two OpenAI models do all the language work, and each has a narrow job:
+
+- **`gpt-5.4-mini`** is the reasoning model. It runs in four of the ten steps: planning the order of the detectors, naming the pattern and then arguing the case for legitimacy, wording the simulated customer reply, and writing the SAR narrative and case summary. Every call uses structured output at temperature 0 with a fixed seed, and the output is checked against a schema.
+- **`text-embedding-3-large`** is the embedding model, truncated to 256 dimensions. It embeds the 5,565 closed-case analyst notes, the 46 policy chunks and each new case summary, so memory can find a case by what it says as well as by how the graph connects it.
+
+Everything else in the stack is chosen to keep the model on that narrow job. The graph answers questions of fact, and deterministic Python turns those facts into a probability and a decision.
+
+In full:
+
+- **Console:** Next.js 15, React 18, TypeScript 5, Tailwind CSS, TanStack Query and Zustand, hosted on AWS Amplify
+- **API:** FastAPI, Uvicorn, Pydantic v2, Server-Sent Events and SQLite, behind nginx on AWS EC2
+- **Agent and domain:** Python 3.11+, a custom ten-step orchestrator, and `httpx` for concurrent graph calls
+- **Language models:** OpenAI `gpt-5.4-mini` for reasoning and `text-embedding-3-large` for embeddings, at 256 dimensions
+- **Graph:** TigerGraph Savanna 4.2.5, GSQL, the TigerGraph MCP server and pyTigerGraph
+- **Data and quality:** DuckDB, pytest, `mypy --strict` and Playwright
 
 ### Architecture decisions
 
@@ -454,5 +476,16 @@ A few smaller lessons:
 - **API documentation:** [apihacker.collabup.co.in/api/docs](https://apihacker.collabup.co.in/api/docs)
 - **Source code, design documents and all twenty answer files:** [github.com/r-rishit27/hacker_house](https://github.com/r-rishit27/hacker_house/tree/sentinel-v2)
 - **Deployment guide:** [github.com/r-rishit27/hacker_house/tree/sentinel-v2/deploy](https://github.com/r-rishit27/hacker_house/tree/sentinel-v2/deploy)
+
+---
+
+## Team CollabUp
+
+Sentinel was built by **Team CollabUp** for the TigerGraph Agentic Fraud Investigation challenge at Hacker House Goa.
+
+### Collaborators
+
+- **Rishit Rastogi** ([@r-rishit27](https://github.com/r-rishit27))
+- **Subhash Bishnoi**
 
 *Built on TigerGraph Savanna with GSQL, the TigerGraph MCP server and GraphRAG, for the TigerGraph Agentic Fraud Investigation challenge at Hacker House Goa.*
