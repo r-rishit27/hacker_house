@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sentinel Medium Paste</title>
+<!-- Generated from ARTICLE.md by make_paste_page.cjs. Open in a browser, copy the article, paste into Medium. -->
+<style>
+  :root { --bg:#fff; --ink:#1a1d23; --muted:#5a6272; --line:#d5d9e0; --soft:#f4f6f9; --accent:#1a8917; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#16181d; --ink:#e7e9ee; --muted:#a2a9b6; --line:#343a45; --soft:#1f232a; } }
+  body { margin:0; background:var(--bg); color:var(--ink); font:19px/1.6 Georgia, "Times New Roman", serif; }
+  .wrap { max-width:720px; margin:0 auto; padding:24px 16px 80px; }
+  .panel { font:15px/1.5 "Segoe UI", system-ui, sans-serif; background:var(--soft); border:1px solid var(--line); border-radius:10px; padding:16px 18px; margin-bottom:28px; }
+  .panel h1 { font-size:17px; margin:0 0 8px; }
+  .panel ol { margin:8px 0 0 18px; padding:0; }
+  .field { display:flex; gap:8px; align-items:flex-start; margin:10px 0; }
+  .field span { flex:1; background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:6px 8px; }
+  button { font:600 14px "Segoe UI", system-ui, sans-serif; border:0; border-radius:999px; padding:8px 16px; background:var(--accent); color:#fff; cursor:pointer; white-space:nowrap; }
+  #status { color:var(--accent); font-weight:600; margin-left:8px; }
+  #article img { max-width:100%; height:auto; display:block; margin:0 auto; }
+  #article figure { margin:28px 0; }
+  #article figcaption { font-size:14px; color:var(--muted); text-align:center; margin-top:6px; }
+  #article pre { background:var(--soft); padding:12px; overflow-x:auto; font-size:14px; }
+  #article code { font-size:.88em; }
+</style></head>
+<body><div class="wrap">
+<div class="panel">
+  <h1>Paste into Medium</h1>
+  <div class="field"><span id="t">Sentinel: An Agentic Fraud Investigator on TigerGraph That Knows When Not to Block</span><button onclick="copyText('t')">Copy title</button></div>
+  <div class="field"><span id="s">Our build for the TigerGraph Agentic Fraud Investigation challenge at Hacker House Goa: facts from GSQL, belief from a calibrated ledger, decisions from a policy engine no prompt can override</span><button onclick="copyText('s')">Copy subtitle</button></div>
+  <ol>
+    <li>In the Medium draft, select everything (Ctrl+A) and delete it.</li>
+    <li>Paste the title into the title line, press Enter, paste the subtitle, then press Enter again.</li>
+    <li>Click <b>Copy article</b>, click into the draft's body, and press Ctrl+V. Medium uploads the images itself; give it a few seconds.</li>
+  </ol>
+  <p style="margin:12px 0 0"><button onclick="copyArticle()">Copy article</button><span id="status" role="status"></span></p>
+</div>
+<div id="article">
+<p>A fraud analyst gets an alert. It says a transaction scored 0.90, and nothing else.</p>
+<p>To decide what to do, they open six systems:</p>
+<ul>
+<li>the card&#39;s transaction history, to learn what normal looks like</li>
+<li>the device and identity record, if the purchase was online</li>
+<li>the billing region, and whether the card has ever been used there</li>
+<li>the closed-case archive, to see whether this customer has been right before</li>
+<li>the fraud policy, to find which rule applies and who has to approve the action it implies</li>
+<li>a case-management tool, to write it all down</li>
+</ul>
+<p>By the time they&#39;re done, the money has often gone.</p>
+<p><strong>Sentinel</strong> is the agent we built to do that investigation. It&#39;s live:</p>
+<ul>
+<li><strong>Console:</strong> <a href="https://hackerhouse.collabup.co.in/">hackerhouse.collabup.co.in</a></li>
+<li><strong>API documentation (Swagger):</strong> <a href="https://apihacker.collabup.co.in/api/docs">apihacker.collabup.co.in/api/docs</a></li>
+<li><strong>Source code:</strong> <a href="https://github.com/r-rishit27/hacker_house/tree/sentinel-v2">github.com/r-rishit27/hacker_house</a></li>
+</ul>
+<p>This post follows the structure the challenge asks for: the problem, what we built, the architecture, how TigerGraph is used, the agentic capabilities, what we learned, and what we&#39;d improve. We&#39;ve added a section on how it&#39;s deployed.</p>
+<figure><img src="https://raw.githubusercontent.com/r-rishit27/hacker_house/sentinel-v2/docs/medium/img/ui-console.png" alt="The Sentinel console investigating HHG-002: the case queue, the probability trajectory as each piece of evidence posts, the case subgraph, and the next best actions with their approval routes"><figcaption>The Sentinel console investigating HHG-002: the case queue, the probability trajectory as each piece of evidence posts, the case subgraph, and the next best actions with their approval routes</figcaption></figure>
+<hr>
+<h2>The problem</h2>
+<p>The challenge brief puts it plainly. Fraud teams have to gather transaction history, trace money movement, find connected accounts, check policies, assess risk, write up findings and decide what to do. That work is <em>&quot;slow, fragmented, difficult to scale, and often completes only after the money is already gone.&quot;</em></p>
+<p>The task is to build an agent that:</p>
+<ol>
+<li><strong>Investigates</strong> when triggered by a risk score, a customer report or an analyst.</li>
+<li><strong>Gathers evidence</strong> from the knowledge graph, transaction history, device and identity signals, account behaviour and prior cases.</li>
+<li><strong>Assesses</strong> the fraud pattern and the level of risk.</li>
+<li><strong>Creates and progresses a case</strong>, recording every decision and action.</li>
+<li><strong>Uses case memory</strong>, retrieving similar past cases and updating memory as cases resolve.</li>
+<li><strong>Gathers more evidence</strong> through controlled actions: asking the account owner, step-up authentication, or asking an analyst.</li>
+<li><strong>Recommends next actions</strong>, and updates them as evidence arrives.</li>
+<li><strong>Operates within policy and permissions.</strong> Some actions need human approval.</li>
+<li><strong>Knows when to stop.</strong></li>
+<li><strong>Explains its reasoning.</strong></li>
+</ol>
+<p>The dataset is IEEE-CIS Fraud Detection from Vesta Corporation, repackaged by TigerGraph. It has about 590,000 card transactions from about 13,500 customers over six months, plus device records for online purchases. It also has closed investigations from the first four months, the bank&#39;s fraud policy, five known fraud patterns, and twenty benchmark cases from the last two months.</p>
+<p>Three facts about this problem shaped everything we built:</p>
+<ol>
+<li><strong>The score isn&#39;t the answer.</strong> In this data, most transactions scored above 0.7 turn out to be legitimate, and some fraud scores near zero. The dataset guide says it directly: <em>&quot;A score is a reason to look, never a verdict.&quot;</em> <strong>There is no fraud label.</strong></li>
+<li><strong>The evidence that settles a case is relational.</strong> Is this device fingerprint shared with other compromised cards? Did this billing region go hot this week compared with a matched baseline? Has this exact $49.00 charge recurred every month? None of those is a row lookup. Each one is a traversal.</li>
+<li><strong>Both kinds of error cost money, but only one is visible.</strong> Blocking a legitimate customer is a silent cost, paid in churn. Missing fraud is a loud cost, paid in write-offs. An analyst under time pressure blocks, and that&#39;s exactly what the brief marks down: <em>&quot;Half the cases are legitimate. An agent that blocks everything scores badly.&quot;</em></li>
+</ol>
+<p>An LLM on its own makes this worse. Asked to judge fraud from raw rows, it anchors on the score, invents plausible transaction ids, and eventually routes <code>BLOCK_CARD</code> to <code>auto</code>.</p>
+<hr>
+<h2>What we built</h2>
+<p>Sentinel is built on one idea:</p>
+<p><strong>A fraud decision is made of three things, and each one goes to the mechanism that&#39;s actually good at it.</strong></p>
+<ul>
+<li><strong>Facts come from the graph.</strong> Every number in a case file is the return value of a named GSQL query, cited by a <code>ref</code> string anyone can re-run.</li>
+<li><strong>Belief comes from a calibrated ledger.</strong> The fraud probability is built up from likelihood ratios fitted on the bank&#39;s own closed cases. The model doesn&#39;t assert it.</li>
+<li><strong>Decisions come from code.</strong> Policy rules R1–R10, the 14 permitted actions and the approval routing table are a pure function, with a unit test for every rule. No prompt can route an action wrongly.</li>
+</ul>
+<p>The language model does the three things it&#39;s genuinely best at: choosing which question to ask next, naming the pattern it sees, and writing prose a human will read. <strong>It never writes an id, an amount, an action name, an approval route or a filing decision.</strong></p>
+<p>For each alert, Sentinel produces a case file containing:</p>
+<ul>
+<li>a <strong>verdict</strong> (fraud, legitimate or uncertain) with a calibrated <strong>fraud probability</strong></li>
+<li>the <strong>affected transactions</strong>, the first suspicious one, and the dollar <strong>exposure</strong></li>
+<li>every piece of <strong>evidence</strong>, each with a query reference and the ids it rests on</li>
+<li>the <strong>evidence it asked for</strong>, and the response it assumed</li>
+<li>the <strong>next best actions and their approval routes, recorded twice</strong>: before the extra evidence was requested, and after it came back</li>
+<li>a <strong>Suspicious Activity Report</strong> when policy requires one, or the reason it wasn&#39;t filed</li>
+<li>the <strong>stop reason</strong>, and measured tool calls, tokens and latency</li>
+</ul>
+<p>The case is then <strong>written back into TigerGraph</strong> as a <code>FraudCase</code> vertex with its edges, so later investigations can find it.</p>
+<p>Seven principles from our product requirements document kept the build honest:</p>
+<ol>
+<li><strong>No answer field comes from free-form model text.</strong> The model can write exactly seven strings, and everything else is computed.</li>
+<li><strong>Every claim carries its query.</strong> An evidence item without a re-runnable <code>ref</code> and the ids it rests on isn&#39;t evidence.</li>
+<li><strong>Uncertainty is a first-class output.</strong> <code>uncertain</code> is a valid verdict, and the system is built to reach it and escalate rather than force a yes or no.</li>
+<li><strong>Absence is evidence.</strong> When a feature is checked and not found, that counts too. This lets the system argue <em>for</em> legitimacy rather than merely failing to find fraud.</li>
+<li><strong>The permission boundary is real code.</strong> Routes are recomputed on the server on every read and every execution.</li>
+<li><strong>Memory compounds within the run.</strong> The twenty cases run in chronological order, and each one is written to the graph before the next starts.</li>
+<li><strong>Instrumentation is honest.</strong> Tool calls, tokens and latency are measured, not estimated.</li>
+</ol>
+<hr>
+<h2>The architecture</h2>
+<figure><img src="https://raw.githubusercontent.com/r-rishit27/hacker_house/sentinel-v2/docs/medium/img/system_architecture.png" alt="Sentinel system architecture: the Data Foundation, Investigation Layer, Decision Intelligence and Case Operations, and the fraud analyst who starts and reviews each investigation"><figcaption>Sentinel system architecture: the Data Foundation, Investigation Layer, Decision Intelligence and Case Operations, and the fraud analyst who starts and reviews each investigation</figcaption></figure>
+<p>The system has four zones.</p>
+<p><strong>The data foundation.</strong> The TigerGraph graph (<code>schema.gsql</code>) holds every transaction, card, customer, device, region and closed case. The alert pack (<code>case_pack.csv</code>) holds the twenty benchmark alerts. The closed-case history is the only place ground truth is written down.</p>
+<p><strong>The investigation layer.</strong> The graph tools send questions to a suite of installed GSQL queries, and a query audit log records every call. That log is what later turns into citations.</p>
+<p><strong>Decision intelligence.</strong> An offline fitter (<code>fit_elt.py</code>) learns, from the closed-case history, how much each piece of evidence should move the probability. It writes those likelihoods to an evidence model (<code>elt.json</code>). At run time the evidence ledger loads those likelihoods and turns findings into a probability, and the policy engine turns that probability into ordered actions.</p>
+<p><strong>Case operations.</strong> The case answer (for example <code>HHG-003.json</code>) collects citations from the audit log, evidence from the ledger and actions from the policy engine. Three things then happen to it:</p>
+<ul>
+<li>the answer validator checks every id against the graph</li>
+<li>case memory upserts the case back into the graph</li>
+<li>the Sentinel console presents it to the analyst</li>
+</ul>
+<p>The fraud analyst selects an alert, which starts the investigation, and reviews the case when it&#39;s done.</p>
+<h3>Containers</h3>
+<figure><img src="https://raw.githubusercontent.com/r-rishit27/hacker_house/sentinel-v2/docs/medium/img/hld-context.png" alt="System context: analysts, team leads and fraud managers use Sentinel, which reads and writes TigerGraph, calls OpenAI, ingests the regulatory corpus once and writes the graded case files"><figcaption>System context: analysts, team leads and fraud managers use Sentinel, which reads and writes TigerGraph, calls OpenAI, ingests the regulatory corpus once and writes the graded case files</figcaption></figure>
+<figure><img src="https://raw.githubusercontent.com/r-rishit27/hacker_house/sentinel-v2/docs/medium/img/hld-containers.png" alt="Containers: a Next.js analyst console talks to a FastAPI backend over REST and Server-Sent Events. The backend hosts the orchestrator and the domain, keeps operational state in SQLite, and reaches TigerGraph and OpenAI"><figcaption>Containers: a Next.js analyst console talks to a FastAPI backend over REST and Server-Sent Events. The backend hosts the orchestrator and the domain, keeps operational state in SQLite, and reaches TigerGraph and OpenAI</figcaption></figure>
+<ul>
+<li><strong>The analyst console.</strong> Next.js 15, TypeScript and Tailwind. It has a case queue, a live investigation timeline, the case subgraph, the SAR, the memory view and an approvals drawer.</li>
+<li><strong>The API.</strong> FastAPI, with class-based controllers. It streams each investigation over Server-Sent Events, enforces the permission boundary, and writes an audit row for every action attempted.</li>
+<li><strong>The domain.</strong> Pure Python with no web framework: graph repository, tools, evidence ledger, policy engine, GraphRAG, memory, validation and the orchestrator.</li>
+<li><strong>SQLite.</strong> It holds only operational state: runs, the event journal, approvals, executions and the audit log. It exists because the audit trail and the journal have to survive a restart, while the answer files must stay exactly as the validator expects. Two stores with two lifetimes, and no duplicate copy of the graded output.</li>
+</ul>
+<h3>The ten-step investigation</h3>
+<p>Early on we decided that a single agent with sixteen tools would work but couldn&#39;t be scored. It would have no step boundaries, nowhere to enforce a budget, and one prompt responsible for both naming a pattern and choosing an approval route. So an investigation is <strong>ten numbered steps</strong>. <strong>Four of them use a language model, and six are deterministic code:</strong></p>
+<ol>
+<li><strong>scope</strong> (code). Resolve the alert to its transaction, card and customer. Set the starting probability from the trigger type. Anchor every time window on the <em>transaction&#39;s</em> timestamp, never the alert&#39;s: the alert lags by one to six hours on all twenty cases.</li>
+<li><strong>plan</strong> (LLM). Order the detectors and say why for each one.</li>
+<li><strong>sweep</strong> (code). Run the GSQL tools concurrently, normalise the results, and post each finding to the ledger.</li>
+<li><strong>recall</strong> (code). Run hybrid GraphRAG over past cases and policy text.</li>
+<li><strong>assess</strong> (LLM). Name the pattern from the seven permitted values and write the evidence claims. Then a <em>devil&#39;s advocate</em> pass makes the strongest case that the activity is legitimate.</li>
+<li><strong>stop_test</strong> (code). Section 6 of the fraud policy: is there enough evidence to act?</li>
+<li><strong>request_evidence</strong> (mixed). If not, ask for one piece of evidence. Code picks the response branch from graph facts, and the model writes only the sentence.</li>
+<li><strong>decide</strong> (code). The policy engine runs twice, once for the recommendation before the evidence request and once for the one after.</li>
+<li><strong>narrate</strong> (LLM). The SAR narrative, grounded in retrieved FinCEN guidance, plus what changed and the stop reason.</li>
+<li><strong>write</strong> (code). Assemble, validate, write the case file, and upsert the <code>FraudCase</code> vertex into the graph.</li>
+</ol>
+<figure><img src="https://raw.githubusercontent.com/r-rishit27/hacker_house/sentinel-v2/docs/medium/img/hld-investigation-sequence.png" alt="One investigation, end to end: the UI starts a run, the orchestrator scopes, plans, sweeps tools into the ledger, retrieves, assesses, decides, requests evidence if the stop test isn't satisfied, decides again, narrates and writes the case back to TigerGraph, streaming an event for each step"><figcaption>One investigation, end to end: the UI starts a run, the orchestrator scopes, plans, sweeps tools into the ledger, retrieves, assesses, decides, requests evidence if the stop test isn't satisfied, decides again, narrates and writes the case back to TigerGraph, streaming an event for each step</figcaption></figure>
+<p>Every step emits events, and that single event stream serves three purposes. It&#39;s the console&#39;s live timeline and the audit trace. Through the evidence postings it carries, it&#39;s also the <code>evidence[]</code> array in the answer file. One data structure produces all three.</p>
+<p>Some things were <strong>deliberately kept out of the agent</strong>:</p>
+<ul>
+<li><strong>Routing.</strong> A prompt will eventually emit <code>auto</code> for <code>BLOCK_CARD</code>, and a quarter of the score is action quality.</li>
+<li><strong>Exposure.</strong> It decides both the <code>BLOCK_CARD</code> route and the SAR threshold, so one hallucinated transaction would flip both.</li>
+<li><strong>The SAR filing decision.</strong> It&#39;s four boolean reads.</li>
+<li><strong>The stopping test.</strong> It&#39;s two comparisons and a count.</li>
+<li><strong>The simulated response branch.</strong> If the model picks the branch, it picks the conclusion, and the before-and-after story becomes circular.</li>
+</ul>
+<h3>The LLM boundary is a type</h3>
+<figure><img src="https://raw.githubusercontent.com/r-rishit27/hacker_house/sentinel-v2/docs/medium/img/hld-llm-boundary.png" alt="The LLM boundary: the model writes seven strings; ids, amounts, exposure, actions, routes, the SAR filing flag, the probability, enums and booleans are computed; both go through the AnswerAssembler and the AnswerValidator into the case file"><figcaption>The LLM boundary: the model writes seven strings; ids, amounts, exposure, actions, routes, the SAR filing flag, the probability, enums and booleans are computed; both go through the AnswerAssembler and the AnswerValidator into the case file</figcaption></figure>
+<p>The model&#39;s entire writing surface is seven strings:</p>
+<ol>
+<li>the case summary</li>
+<li>the pattern description</li>
+<li>the SAR narrative</li>
+<li>the prose half of the SAR reason</li>
+<li>what changed between the two recommendations</li>
+<li>the evidence claims</li>
+<li>the assumed customer response</li>
+</ol>
+<p>They live in one object, <code>Narration</code>, whose fields are all plain strings. The <code>AnswerAssembler</code> accepts typed values from the policy engine, the ledger and the tool results, and it accepts prose only through <code>Narration</code>. <strong>There&#39;s no code path by which a model response becomes an action name.</strong></p>
+<p>Every finished answer then passes two checks:</p>
+<ul>
+<li>the <code>AnswerValidator</code> checks the answer contract, as pure code</li>
+<li>a graph identity checker proves every id exists in the graph and re-checks the exposure against the graph to within two cents</li>
+</ul>
+<p>An answer that fails is quarantined in <code>runs/</code> and never reaches <code>cases/</code>.</p>
+<h3>Architecture decisions</h3>
+<p>We recorded nine architecture decision records (ADRs). The ones that shaped the system most:</p>
+<ul>
+<li><strong>A custom class-based orchestrator, not LangGraph or the OpenAI Agents SDK.</strong> The deterministic policy path is what gets scored, and it would have sat outside any framework anyway. Owning the orchestrator gave us control of step numbering, budget enforcement and event order. It cost about 300 lines of retry, cancellation and streaming code.</li>
+<li><strong>The API depends on an orchestrator interface, never on the agent.</strong> There are three implementations: the live agent, a scripted one that replays a fixture, and a replay one that plays back a recorded run. The frontend never waited for the agent, and the demo never depends on a live model call.</li>
+<li><strong>Vectors live in TigerGraph; the hot path reads a local cache.</strong> Embeddings are stored on the vertices themselves, and the shortlist is computed over an in-process matrix of about 5.7 MB.</li>
+<li><strong>SSE, not WebSocket.</strong> Every event is written to the journal before it&#39;s published. Reconnecting with <code>Last-Event-ID</code> is then an exact replay with no gaps.</li>
+<li><strong>Routes are recomputed, never echoed.</strong> A client can&#39;t downgrade <code>BLOCK_CARD</code> to <code>auto</code>.</li>
+<li><strong>One contract, generated into TypeScript.</strong> The 14 action names, 3 routes and 7 enums come from the Python policy module, and the frontend never hand-types them.</li>
+<li><strong>An async graph repository over <code>httpx</code>.</strong> A case makes about 15 graph calls at 0.7–1.1 seconds each. Run one after another, that&#39;s 10–16 seconds of pure latency per case, so independent calls overlap.</li>
+</ul>
+<hr>
+<h2>How TigerGraph is used</h2>
+<p>TigerGraph isn&#39;t a store the agent occasionally queries. It&#39;s where the agent&#39;s facts, memory and policy all live.</p>
+<figure><img src="https://raw.githubusercontent.com/r-rishit27/hacker_house/sentinel-v2/docs/medium/img/hld-graph-model.png" alt="The graph model: Customer owns Card, Card made Transaction, transactions chain by NEXT and link to DeviceProfile, BillingRegion, EmailDomain and ProductCode; ClosedCase and Alert attach to cards and transactions; the FraudCase that Sentinel writes links to all of them and to the PolicyDoc rule it applied"><figcaption>The graph model: Customer owns Card, Card made Transaction, transactions chain by NEXT and link to DeviceProfile, BillingRegion, EmailDomain and ProductCode; ClosedCase and Alert attach to cards and transactions; the FraudCase that Sentinel writes links to all of them and to the PolicyDoc rule it applied</figcaption></figure>
+<h3>The schema</h3>
+<p>The graph has 12 vertex types and 20 edge types, each edge with a materialised reverse so traversal direction is free. It holds:</p>
+<ul>
+<li>590,742 transactions</li>
+<li>14,317 cards and 13,553 customers</li>
+<li>9,704 device profiles and 332 billing regions</li>
+<li>5,565 closed cases</li>
+<li>20 alerts</li>
+<li>46 policy chunks</li>
+</ul>
+<p>Three facts about this data drove design decisions:</p>
+<ul>
+<li><strong>A <code>NEXT</code> edge chains each card&#39;s transactions in time.</strong> There are 576,425 of them, so &quot;how long since the last charge on this card?&quot; is one hop rather than a sort.</li>
+<li><strong>A <code>DeviceProfile</code> is a fingerprint class, not a device.</strong> Just 116 profiles carry 24,653 of the card links, and the largest spans 842 cards. Every device-based connection is therefore gated on how many cards a profile spans. Without that gate, the shared-origin rule (R6) invents a fraud ring on nearly any card ever used online.</li>
+<li><strong><code>APPLIED_RULE</code> links a case to the policy chunk that decided it.</strong> That turns &quot;which rule decided this?&quot; into a graph question.</li>
+</ul>
+<h3>GSQL as the agent&#39;s vocabulary</h3>
+<p>The agent&#39;s entire view of the graph is <strong>26 installed GSQL queries</strong>, and 19 of them are exposed to the agent as typed tools with JSON schemas. The rest serve the console, and are withheld on purpose: a tool the agent can call is a tool it can call on the wrong case. There&#39;s no text-to-query layer, and the arguments are built from measured values, never by the model.</p>
+<p><strong>The queries return facts, not verdicts.</strong> Rule thresholds such as R5&#39;s &quot;three or more small authorisations&quot; and R1&#39;s 0.70 live in the policy engine, where they&#39;re unit-tested. Some examples of what the queries answer:</p>
+<ul>
+<li><code>recurring_charge_probe</code>: has this same amount and product recurred over months?</li>
+<li><code>region_novelty</code>: is this billing region new <em>as of the alert</em>?</li>
+<li><code>device_neighbors</code>: which other cards share this profile, and how many cards does the profile span?</li>
+<li><code>txn_sequence_context</code>: how many seconds since the previous transaction on this card, along the <code>NEXT</code> edge?</li>
+<li><code>ring_expand_2hop</code>: which cards connect through <em>specific</em> shared devices, two hops out?</li>
+</ul>
+<h3>Hybrid GraphRAG</h3>
+<p>The brief asks for GraphRAG that passes relevant context to the LLM rather than raw data. Pure vector search over a graph database is a weak retriever, so Sentinel runs <strong>two independent rankings and fuses them</strong>:</p>
+<ul>
+<li><strong>Vector:</strong> cosine similarity over 5,611 embeddings stored on the vertices. These are the 5,565 closed-case analyst notes plus the 46 policy chunks. This finds a case that <em>reads</em> like the current one.</li>
+<li><strong>Structural:</strong> a graph ranking over the same card (weight 3), then the same customer or a shared device (2), then the same pattern with exposure within ±50% (1). This finds a case the graph <em>connects</em> to the current one.</li>
+</ul>
+<p>A cosine and a hop count have no common scale, so the rankings are combined with <strong>reciprocal rank fusion</strong>. Each result scores <code>1 / (60 + rank)</code> in each list, with a bonus when it appears in both. Each surviving hit is then expanded back through the graph for its provenance: which edge connected it, which card, which device.</p>
+<p>One <strong>hard filter</strong> runs first: <code>opened_at &lt; as_of</code>. A case must never retrieve an investigation that hadn&#39;t happened yet. The twenty cases run in chronological order and write their own vertices as they go, so without this filter case memory would be a data leak rather than a capability.</p>
+<p>The policy corpus was <strong>parsed out of the organisers&#39; guide</strong>, not copied by hand. It has 46 chunks: 10 rules, 9 policy sections, 5 patterns, 16 glossary terms and 6 guidance notes. Every embedding is <code>text-embedding-3-large</code> at 256 dimensions, and embedding the whole corpus cost about a cent.</p>
+<p>On HHG-003, the retriever returned <strong>five of the six closed cases</strong> a human had found by working the case by hand. It also returned policy rule R7, <em>&quot;disputed but legitimate&quot;</em>, as the top policy chunk. Neither ranking gets both on its own.</p>
+<h3>Write-back and case memory</h3>
+<p>Each finished case becomes one <code>FraudCase</code> vertex with its edges, written in a single REST++ call:</p>
+<ul>
+<li><code>CASE_INVOLVES</code> and <code>CASE_ON_CARD</code>: the transactions and card involved</li>
+<li><code>CASE_CONNECTED_TO</code>: connected cards</li>
+<li><code>CITES</code> and <code>CITES_CASE</code>: the bank&#39;s closed cases, and Sentinel&#39;s own earlier cases</li>
+<li><code>IMPLICATES</code>: device profiles</li>
+<li><code>APPLIED_RULE</code>: the policy chunk that decided it</li>
+<li><code>FROM_ALERT</code>: the alert that started it</li>
+</ul>
+<p>The case summary is embedded too, so a later investigation can find it by similarity as well as by structure.</p>
+<h3>TigerGraph MCP</h3>
+<p>The <code>tigergraph-mcp</code> server is wired in over stdio and exposes 69 tools. We checked it by calling a query through it and getting back the same 42 prior transactions in one billing region that the hand investigation had counted. The agent&#39;s own traffic goes through the typed Python repository, which is where the refs, the query log and the result normalisation live. MCP shows that the same graph is agent-accessible over a standard protocol.</p>
+<hr>
+<h2>The agentic capabilities</h2>
+<p>Here&#39;s how each capability in the brief maps to what&#39;s built.</p>
+<ul>
+<li><strong>Investigate from a trigger.</strong> There are three trigger types, each with its own fitted starting probability: 0.25 for a risk score, 0.75 for a customer report and 0.50 for an analyst request. So a 0.90 score starts the investigation at 0.25, because in this data a score is a reason to look.</li>
+<li><strong>Gather and analyse evidence.</strong> A deterministic sweep of GSQL tools covers transaction history, device and identity signals, account behaviour, billing regions and prior cases, and each finding posts to the ledger.</li>
+<li><strong>Assess the situation.</strong> The model names the pattern from typology text retrieved by GraphRAG, and the ledger prices the evidence.</li>
+<li><strong>Create and progress a case.</strong> The case is written to the graph during the run, and the event journal records every step, tool call and posting.</li>
+<li><strong>Use case memory.</strong> Hybrid retrieval runs over the bank&#39;s 5,565 closed cases <em>and</em> the cases Sentinel wrote earlier in the same run.</li>
+<li><strong>Gather more evidence.</strong> Sentinel can ask for customer validation, step-up authentication or analyst review: the three things the policy allows without approval. It gets one round per case.</li>
+<li><strong>Recommend next actions.</strong> The policy engine runs twice, and both recommendations are recorded.</li>
+<li><strong>Operate within permissions.</strong> Only <code>auto</code> actions execute on their own. <code>L1</code> and <code>L2</code> actions return a 403 that names who can approve them.</li>
+<li><strong>Decide when to stop.</strong> It applies Section 6 of the policy, as written.</li>
+<li><strong>Explain.</strong> Every claim carries a re-runnable <code>ref</code>, and every rule cites the policy chunk it came from.</li>
+</ul>
+<h3>The evidence ledger</h3>
+<p>The fraud probability is built up in log-odds:</p>
+<ul>
+<li>It starts from the prior for the trigger type.</li>
+<li>Each finding posts a likelihood ratio from a table of <strong>29 features in 11 groups</strong>. The table was fitted on <strong>14,055 confirmed-fraud transactions</strong> against <strong>300,602 card-matched controls</strong>.</li>
+<li>When a feature was checked and <em>not</em> found, the ledger posts its &quot;absent&quot; ratio. That&#39;s how Sentinel argues for legitimacy.</li>
+<li>Correlated evidence is <strong>capped per group, symmetrically</strong>, at 1.2 in log-odds. &quot;New device&quot;, &quot;device never used on this card&quot; and &quot;proxy present&quot; are three phrasings of one observation, and uncapped they would push a single observation past 0.9 on their own.</li>
+</ul>
+<p>Each posting records its claim, its query <code>ref</code>, its entity ids, its ratio, and the probability before and after. That one record is the answer file&#39;s evidence entry, a point on the console&#39;s probability trajectory, and a row in the audit trace.</p>
+<h3>Knowing when to stop</h3>
+<p>The stopping test is Section 6 of the policy, written as code:</p>
+<ul>
+<li>stop if the customer has confirmed or denied the transaction</li>
+<li>stop if the probability is at least 0.85 <strong>and</strong> at least two independent evidence groups support it</li>
+<li>stop if the probability is at most 0.15 <strong>and</strong> at least two independent evidence groups support it</li>
+<li>otherwise, ask for more evidence, at most once</li>
+</ul>
+<p>&quot;Independent&quot; means distinct evidence groups whose total moved the probability by more than 0.05. That&#39;s what the policy&#39;s <em>&quot;at least two independent pieces of evidence&quot;</em> actually means.</p>
+<h3>Gathering more evidence, honestly</h3>
+<p>The brief supplies no customer replies, so they have to be simulated. The simulator picks its branch <strong>from measured graph facts</strong>, never from the conclusion the agent is leaning towards:</p>
+<ul>
+<li><strong>Confirmed:</strong> the charge recurs monthly at the same amount, or the region and amount band are well established.</li>
+<li><strong>Denied:</strong> the cardholder has a track record of correctly reporting fraud, or a novel device, a novel region and a high score all line up.</li>
+<li><strong>No reply:</strong> neither side reaches its threshold, which is the honest outcome for an ambiguous case.</li>
+<li><strong>Step-up passed or failed:</strong> passed when the card has used this device before.</li>
+</ul>
+<p>Every simulated response records the queries its branch rests on, and the model writes only the human-readable sentence.</p>
+<h3>Before and after</h3>
+<p>HHG-006 shows why the recommendation is recorded twice:</p>
+<ul>
+<li><strong>Before the request:</strong> <code>BLOCK_CARD</code> (L1), <code>CREATE_CASE</code>, <code>ESCALATE_TO_ANALYST</code> and <code>FILE_REPORT</code> (L2).</li>
+<li><strong>Evidence round:</strong> Sentinel asked for step-up authentication, and the cardholder passed it.</li>
+<li><strong>After:</strong> <code>CREATE_CASE</code> and <code>ESCALATE_TO_ANALYST</code>.</li>
+</ul>
+<p>The agent talked itself out of blocking the card and filing a report, and the file records both halves and what changed.</p>
+<h3>Permissions that bite</h3>
+<figure><img src="https://raw.githubusercontent.com/r-rishit27/hacker_house/sentinel-v2/docs/medium/img/hld-permission-sequence.png" alt="The permission boundary: an analyst asks to execute BLOCK_CARD; the route permission policy denies it; the approval is enqueued and audited; a 403 names the required route and the roles that can approve; a fraud manager approves, the route is re-checked at decision time, the action executes and is audited with its approval reference"><figcaption>The permission boundary: an analyst asks to execute BLOCK_CARD; the route permission policy denies it; the approval is enqueued and audited; a 403 names the required route and the roles that can approve; a fraud manager approves, the route is re-checked at decision time, the action executes and is audited with its approval reference</figcaption></figure>
+<p>The routing table is code:</p>
+<ul>
+<li>Thirteen actions have a fixed route.</li>
+<li><code>BLOCK_CARD</code> is the only one whose route depends on exposure: <strong>L1 at or below $2,500.00, L2 from $2,500.01</strong>.</li>
+<li>An unknown action name raises an error rather than defaulting to <code>auto</code>.</li>
+</ul>
+<p>Tested end to end over HTTP:</p>
+<pre><code>analyst POSTs BLOCK_CARD   -&gt; 403 forbidden_route, naming team_lead and
+                               fraud_manager, carrying the approval it enqueued
+same analyst approves it   -&gt; 403 role_insufficient_for_approval
+team_lead approves it      -&gt; executed, simulated, audited
+</code></pre>
+<p>Every attempt writes one audit row with the actor, role, route, approval reference and whether it was simulated. That includes the denied ones. As the brief permits, every action except <code>CREATE_CASE</code> is simulated, and it&#39;s labelled that way on the wire and in the console.</p>
+<h3>Budgets and controls</h3>
+<p>A budget guard enforces, per run:</p>
+<ul>
+<li>25 tool calls</li>
+<li>exactly one evidence round</li>
+<li>a token ceiling, a dollar ceiling of $1.50, and a wall-clock ceiling</li>
+</ul>
+<p>A run that exceeds any of these ends as <code>budget_exceeded</code>; it never quietly continues. Every model call is structured output at temperature 0 with a fixed seed. If the output doesn&#39;t match the schema, the call is retried with the validation error fed back.</p>
+<hr>
+<h2>Results</h2>
+<p>On the twenty benchmark cases:</p>
+<ul>
+<li><strong>20 of 20 answer files are valid</strong>, against both the answer contract and the live graph.</li>
+<li><strong>Verdicts: 8 fraud, 9 uncertain, 3 legitimate.</strong> No single verdict covers more than 45% of the pack.</li>
+<li><strong>The block rate is 10%</strong> (2 of 20), against a 50% ceiling.</li>
+<li><strong>The SAR filing rate is 10%</strong> (2 of 20), against a 20% ceiling.</li>
+<li><strong>The recommendation moved after the evidence round on 8 of 20 cases</strong> (40%). On three of them (HHG-002, HHG-006 and HHG-015) the actions themselves changed. On the other five, the same actions ended up resting on a different rule.</li>
+<li><strong>About 17 seconds, 7,000 tokens and 11–15 GSQL calls per case.</strong> The whole pack runs in under six minutes.</li>
+</ul>
+<figure><img src="https://raw.githubusercontent.com/r-rishit27/hacker_house/sentinel-v2/docs/medium/img/ui-monitor.png" alt="The Monitor view: 20 of 20 valid, 10% block rate, 10% SAR rate, 40% of recommendations moved after evidence, 9 uncertain as the dominant verdict, the probability distribution and every case as graded"><figcaption>The Monitor view: 20 of 20 valid, 10% block rate, 10% SAR rate, 40% of recommendations moved after evidence, 9 uncertain as the dominant verdict, the probability distribution and every case as graded</figcaption></figure>
+<p>Engineering:</p>
+<ul>
+<li>349 unit and integration tests, which need no network and no credentials</li>
+<li>16 tests against the live graph</li>
+<li><code>mypy --strict</code> clean across 101 source files</li>
+<li>28 headless-browser smoke checks on the console</li>
+</ul>
+<p><strong>Ring discovery gave an honest negative.</strong> At one hop, which is the hop rule R6 is defined on, no two of the twenty alerts share a specific device profile, so R6 is right not to fire on this pack. At two hops, one fingerprint does carry twelve cards belonging to twelve customers. The bank had already closed seven of them as confirmed fraud, with $73,178 of exposure. The console shows it, and says exactly why it doesn&#39;t count as a ring under the policy.</p>
+<figure><img src="https://raw.githubusercontent.com/r-rishit27/hacker_house/sentinel-v2/docs/medium/img/ui-ring.png" alt="The ring view: one device fingerprint carrying twelve cards from twelve customers, seven of them already confirmed fraud with $73,178 of exposure, and the explanation of why it is not counted as a ring at the hop the policy defines"><figcaption>The ring view: one device fingerprint carrying twelve cards from twelve customers, seven of them already confirmed fraud with $73,178 of exposure, and the explanation of why it is not counted as a ring at the hop the policy defines</figcaption></figure>
+<hr>
+<h2>Deployment</h2>
+<p>The system is deployed on AWS: the API on EC2 behind nginx, and the console on Amplify.</p>
+<pre><code>  browser ──https──▶ Amplify (Next.js SSR)
+     │                  the console; the API base URL is baked in at build
+     │
+     └────https──▶ EC2 :443 ── nginx ── :8000 uvicorn (1 worker)
+                                            │
+                                            ├──https──▶ TigerGraph Savanna
+                                            └──https──▶ OpenAI
+</code></pre>
+<ul>
+<li><strong>Console:</strong> <a href="https://hackerhouse.collabup.co.in/">hackerhouse.collabup.co.in</a></li>
+<li><strong>API and Swagger documentation:</strong> <a href="https://apihacker.collabup.co.in/api/docs">apihacker.collabup.co.in/api/docs</a></li>
+<li><strong>Deployment guide and scripts:</strong> <a href="https://github.com/r-rishit27/hacker_house/tree/sentinel-v2/deploy">github.com/r-rishit27/hacker_house/tree/sentinel-v2/deploy</a></li>
+</ul>
+<p>The API serves 30 endpoints, grouped as follows:</p>
+<ul>
+<li><strong>Cases:</strong> the queue, one case, its answer file, trace, validation, SAR, memory and actions, and writing it to the graph.</li>
+<li><strong>Investigations:</strong> start a run, stream its events over SSE, fetch the recorded events, cancel.</li>
+<li><strong>Actions and approvals:</strong> execute an action, list executions, list approvals, decide one.</li>
+<li><strong>Graph:</strong> a case&#39;s subgraph for the canvas, and the ring analysis.</li>
+<li><strong>Benchmark and audit:</strong> the pack report, a batch run, and the audit log.</li>
+<li><strong>System:</strong> <code>/health</code> for liveness, <code>/ready</code> for whether the graph, the model and the vector index are reachable, and <code>/meta</code> for the enums, routing table and thresholds.</li>
+</ul>
+<p>A few deployment lessons worth passing on:</p>
+<ul>
+<li><strong>An HTTPS page can&#39;t call an HTTP API.</strong> The browser blocks it as mixed content before the request leaves the tab, so nothing appears in the network panel. The API needs a hostname and a certificate. Certbot issues it during bootstrap, and <code>&lt;ip&gt;.sslip.io</code> works when you don&#39;t have a domain.</li>
+<li><strong><code>CORS_ORIGINS</code> has to match the console&#39;s origin character for character.</strong> A mismatch looks exactly like the API being down.</li>
+<li><strong>The API runs exactly one worker, on purpose.</strong> The run registry, the SSE broker and the investigation tasks are all in-process. A second worker would admit a run the first one had refused, and a browser could attach to a broker that isn&#39;t the one emitting its events.</li>
+<li><strong>Nothing may buffer the SSE stream.</strong> The API sends <code>X-Accel-Buffering: no</code>, and the nginx site turns off proxy buffering and gzip on the events route. Otherwise the timeline sits empty and then fills all at once when the run ends.</li>
+<li><strong>Secrets never go in EC2 user-data</strong>, which anything on the box can read from the metadata service. They live in a <code>0640</code> environment file that systemd reads. The service refuses to start without its five required settings, and the model ids deliberately have no defaults.</li>
+<li><strong><code>/ready</code> is legitimately 503 for the first minute.</strong> The Savanna workspace auto-stops when idle and takes about 45 seconds to wake. When it&#39;s asleep, the first response is an HTML &quot;Starting workspace&quot; page instead of JSON. The repository detects that page and retries rather than reporting an error.</li>
+</ul>
+<p>There are bootstrap scripts for both Ubuntu 24.04 and Amazon Linux 2023, measured on the actual instances. Redeploying is one command that fetches the latest code, import-checks it while the old process is still serving, restarts, and polls <code>/health</code>.</p>
+<hr>
+<h2>What we learned</h2>
+<p>We found and fixed twenty-five defects, and every one has a regression test. Four of them taught us something beyond this project, because each one looked completely reasonable.</p>
+<p><strong>1. The risk score was counted twice.</strong> At one point 13 of 20 cases came back as fraud, eight of them pushed past 0.85 by the score alone. A score-triggered alert only exists <em>because</em> the model scored the transaction high, and the starting probability for that trigger already includes that fact. Posting the score band&#39;s full likelihood ratio on top of it counted the same fact again. We re-centred the band on what the alert already implies. A score in the 0.70–0.85 band now adds nothing beyond the starting probability, and only a score above that band adds anything. On a customer report, the model&#39;s score is still genuinely new information, so it counts in full.</p>
+<p><strong>2. Four evidence groups held one observation.</strong> &quot;Online&quot;, &quot;distance missing&quot;, &quot;all match flags true&quot; and &quot;device found&quot; are four consequences of a purchase happening online, and the ledger was treating them as four separate facts. Across the twenty cases they added +1.84 log-odds to every fraud verdict and −1.45 to every legitimate one. A correlated-evidence cap is only as good as its grouping, and the fitting procedure can&#39;t choose the grouping for you.</p>
+<p><strong>3. The agent wasn&#39;t deterministic, and we couldn&#39;t see it.</strong> Four identical runs of one case, at temperature 0 with a fixed seed, returned probabilities of 0.3577, 0.5025, 0.3569 and 0.3569. The planner was free to add detectors to a mandatory core, and it added a different set each time. A likelihood ratio that never posts isn&#39;t neutral: it&#39;s missing from the sum. Earlier, a planner given a free choice had dropped the five <em>exonerating</em> detectors and returned 0.74 instead of 0.36 on identical facts. Now the detector set depends only on the trigger type, and the planner decides only the order. Three consecutive runs agree to four decimal places.</p>
+<p><strong>4. The simulator wrote a reply the customer would never give.</strong> A cardholder who had reported <em>&quot;I never made this purchase&quot;</em> was simulated as confirming the charge, because the recurring-charge probe said it looked like theirs. The resulting file recommended opening a case and closing it as no fraud, both at once. Where the facts and the cardholder disagree, the honest record is a <em>contest</em>, and a contest is exactly what policy rule R7 exists for.</p>
+<p><strong>All four were found the same way.</strong> Not by reading code, and not by tests: three hundred of them passed throughout. We took the twenty finished answer files, broke each probability down by evidence group, and looked for a column that was identical on every row. The agent was never broken. It was <em>composed</em> wrong, and composition errors are invisible from inside any single component.</p>
+<p>A few smaller lessons:</p>
+<ul>
+<li><strong>Asked cold about HHG-003, the model called it card testing,</strong> twice. Its own explanation gave it away: <em>&quot;the same $49.00 amount has repeated many times.&quot;</em> That&#39;s a recurring charge, which R7 says must never be blocked. The pattern definitions now go into the prompt word for word, and the policy path has no model in it at all.</li>
+<li><strong>One shared cost meter served the whole batch,</strong> so the token count climbed from 7,541 on the first case to 122,847 on the twentieth.</li>
+<li><strong>&quot;U.S. dollars&quot; was read as two sentences</strong> by a sentence counter, and that one abbreviation cost a whole answer file.</li>
+<li><strong><code>pytest -m live</code> skipped all sixteen live tests</strong> because the credentials were in <code>.env</code>, not in the environment. At a glance, &quot;16 skipped&quot; reads exactly like &quot;16 passed&quot;.</li>
+</ul>
+<hr>
+<h2>What we&#39;d improve with more time</h2>
+<ul>
+<li><strong>Refit on alerted transactions.</strong> Every ratio compares fraud against random card-matched controls, but we score <em>alerted</em> transactions. Re-centring the score fixed the worst instance of that mismatch. The general fix needs alerted legitimate transactions, which this dataset doesn&#39;t contain.</li>
+<li><strong>Learn the evidence groups instead of declaring them.</strong> A correlation matrix over the 29 features would have found the online split in a minute, and would find the next one.</li>
+<li><strong>Give the devil&#39;s advocate its own queries,</strong> so it&#39;s an adversary rather than a reviewer arguing from the same findings.</li>
+<li><strong>Close the loop on outcomes.</strong> Cases are written back with their verdict, but nothing yet reads back whether a later case agreed with them.</li>
+<li><strong>Move to native vector search in TigerGraph.</strong> Embeddings live on the vertices today, but the similarity search runs in the API process. That&#39;s because native vector attributes needed a schema migration on a live 590,742-vertex graph during a hackathon.</li>
+<li><strong>Add real authentication.</strong> Authorization is real and tested, but identity is a request header. That&#39;s fine for a demo and not for production.</li>
+<li><strong>Try a second dataset.</strong> Every number here is one bank, six months and one model. The interesting question is which of the four errors are general.</li>
+</ul>
+<hr>
+<h2>Try it</h2>
+<ul>
+<li><strong>Live console:</strong> <a href="https://hackerhouse.collabup.co.in/">hackerhouse.collabup.co.in</a>. Press <strong>Run demo</strong> to walk three real cases, or switch the role between analyst, team lead and fraud manager to see the approval boundary.</li>
+<li><strong>API documentation:</strong> <a href="https://apihacker.collabup.co.in/api/docs">apihacker.collabup.co.in/api/docs</a></li>
+<li><strong>Source code, design documents and all twenty answer files:</strong> <a href="https://github.com/r-rishit27/hacker_house/tree/sentinel-v2">github.com/r-rishit27/hacker_house</a></li>
+<li><strong>Deployment guide:</strong> <a href="https://github.com/r-rishit27/hacker_house/tree/sentinel-v2/deploy">github.com/r-rishit27/hacker_house/tree/sentinel-v2/deploy</a></li>
+</ul>
+<p><em>Built on TigerGraph Savanna with GSQL, the TigerGraph MCP server and GraphRAG, for the TigerGraph Agentic Fraud Investigation challenge at Hacker House Goa.</em></p>
+
+</div>
+</div>
+<script>
+function flash(msg){ var s=document.getElementById('status'); s.textContent=msg; setTimeout(function(){ s.textContent=''; }, 2500); }
+function copyText(id){
+  var text=document.getElementById(id).textContent;
+  if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(function(){ flash('Copied'); }, function(){ selectNode(id); }); }
+  else { selectNode(id); }
+}
+function selectNode(id){
+  var r=document.createRange(); r.selectNodeContents(document.getElementById(id));
+  var sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+  try { document.execCommand('copy'); flash('Copied'); } catch(e) { flash('Selected: press Ctrl+C'); }
+}
+function copyArticle(){ selectNode('article'); }
+</script>
+</body></html>

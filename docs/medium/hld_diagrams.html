@@ -1,0 +1,179 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>HLD Diagrams</title>
+<!-- Renders the Mermaid diagrams from docs/system/HLD.md for the Medium article. -->
+<style>
+body{margin:0;background:#e9ecf1;font:18px/1.4 "Segoe UI",system-ui,sans-serif;color:#161a22}
+.fig{width:max-content;min-width:1100px;box-sizing:border-box;background:#fff;padding:44px 56px 30px;margin:0 0 40px}
+.fig h2{margin:0 0 18px;font-size:30px;letter-spacing:-.02em}
+.mermaid{display:flex;justify-content:center;margin:0}
+.mermaid svg{max-width:none!important;height:auto!important}
+.src{margin:14px 0 0;color:#8a93a3;font-size:14px;text-align:right}
+</style></head><body>
+<section class="fig" id="hld-context"><h2>System context</h2><pre class="mermaid">
+graph TB
+    Analyst[&quot;Fraud analyst / team lead /&lt;br/&gt;fraud manager&quot;]
+    Judge[&quot;Judge · reviewer&quot;]
+    Sentinel[&quot;&lt;b&gt;Sentinel&lt;/b&gt;&lt;br/&gt;Agentic fraud investigation&quot;]
+    TG[(&quot;TigerGraph Savanna&lt;br/&gt;GRAPH_GOA · 4.2.5&quot;)]
+    OpenAI[&quot;OpenAI API&lt;br/&gt;reasoning + embeddings&quot;]
+    Regs[&quot;Regulatory corpus&lt;br/&gt;FinCEN · FFIEC&quot;]
+    Files[&quot;cases/HHG-0NN.json&lt;br/&gt;the graded submission&quot;]
+
+    Analyst --&gt;|investigates, approves| Sentinel
+    Judge --&gt;|reads| Files
+    Sentinel --&gt;|GSQL + REST| TG
+    Sentinel --&gt;|chat + embeddings| OpenAI
+    Regs --&gt;|ingested once| Sentinel
+    Sentinel --&gt;|writes| Files
+    Sentinel --&gt;|writes FraudCase| TG
+</pre><p class="src">From docs/system/HLD.md</p></section>
+<section class="fig" id="hld-containers"><h2>Containers</h2><pre class="mermaid">
+graph TB
+    subgraph FE[&quot;frontend/ — Next.js 15, TypeScript, Tailwind&quot;]
+        UI[&quot;Analyst console&lt;br/&gt;queue · case · approvals · graph · SAR · memory&quot;]
+        DS[&quot;Design system&lt;br/&gt;tokens + primitives&quot;]
+        SSEC[&quot;SSE stream client&lt;br/&gt;fetch + ReadableStream&quot;]
+    end
+
+    subgraph BE[&quot;backend/ — Python 3.11+&quot;]
+        API[&quot;api/ — FastAPI&lt;br/&gt;class-based controllers&quot;]
+        ORCH[&quot;sentinel/agents/&lt;br/&gt;InvestigationOrchestrator&quot;]
+        DOM[&quot;sentinel/ — domain&lt;br/&gt;policy · evidence · tools · rag · memory · validation&quot;]
+        STORE[(&quot;SQLite&lt;br/&gt;runs · events · approvals · audit&quot;)]
+    end
+
+    TG[(&quot;TigerGraph&lt;br/&gt;GRAPH_GOA&quot;)]
+    OAI[&quot;OpenAI API&quot;]
+    CASES[&quot;cases/*.json&lt;br/&gt;runs/*.trace.json&quot;]
+
+    UI --&gt; DS
+    UI --&gt;|REST| API
+    SSEC --&gt;|text/event-stream| API
+    API --&gt; ORCH
+    API --&gt; DOM
+    API --&gt; STORE
+    ORCH --&gt; DOM
+    DOM --&gt;|installed queries, upserts| TG
+    ORCH --&gt;|structured output| OAI
+    DOM --&gt;|embeddings| OAI
+    ORCH --&gt; CASES
+</pre><p class="src">From docs/system/HLD.md</p></section>
+<section class="fig" id="hld-graph-model"><h2>The graph model</h2><pre class="mermaid">
+graph LR
+    CU[Customer] --&gt;|OWNS| CA[Card]
+    CA --&gt;|MADE| TX[Transaction]
+    TX --&gt;|NEXT| TX
+    TX --&gt;|FROM_DEVICE| DP[DeviceProfile]
+    TX --&gt;|BILLED_IN| BR[BillingRegion]
+    TX --&gt;|PURCHASER_EMAIL / RECIPIENT_EMAIL| ED[EmailDomain]
+    TX --&gt;|OF_PRODUCT| PC[ProductCode]
+    CC[ClosedCase] --&gt;|CC_INVOLVES| TX
+    CC --&gt;|CC_ON_CARD| CA
+    CC --&gt;|CC_CONNECTED_TO| CA
+    AL[Alert] --&gt;|ALERT_ON_CARD| CA
+    AL --&gt;|ALERT_ON_TXN| TX
+    FC[FraudCase] --&gt;|CASE_INVOLVES| TX
+    FC --&gt;|CASE_ON_CARD| CA
+    FC --&gt;|CASE_CONNECTED_TO| CA
+    FC --&gt;|CITES| CC
+    FC --&gt;|CITES_CASE| FC
+    FC --&gt;|IMPLICATES| DP
+    FC --&gt;|APPLIED_RULE| PD[PolicyDoc]
+    FC --&gt;|FROM_ALERT| AL
+</pre><p class="src">From docs/system/HLD.md</p></section>
+<section class="fig" id="hld-llm-boundary"><h2>The LLM boundary</h2><pre class="mermaid">
+graph LR
+    subgraph Computed[&quot;Computed — never from the model&quot;]
+        A1[IDs] --- A2[amounts] --- A3[exposure]
+        A4[actions] --- A5[routes] --- A6[&quot;sar.file&quot;]
+        A7[probability] --- A8[enums] --- A9[booleans]
+    end
+    subgraph Written[&quot;Written by the model — seven strings&quot;]
+        B1[&quot;case.summary&quot;] --- B2[&quot;pattern_description&quot;]
+        B3[&quot;sar.narrative&quot;] --- B4[&quot;sar.reason prose&quot;]
+        B5[&quot;what_changed&quot;] --- B6[&quot;evidence[].claim&quot;]
+        B7[&quot;assumed_response&quot;]
+    end
+    Written --&gt;|assembled by| ANS[&quot;AnswerAssembler&quot;]
+    Computed --&gt;|assembled by| ANS
+    ANS --&gt; VAL[&quot;AnswerValidator&quot;] --&gt; FILE[&quot;cases/HHG-0NN.json&quot;]
+</pre><p class="src">From docs/system/HLD.md</p></section>
+<section class="fig" id="hld-investigation-sequence"><h2>One investigation, end to end</h2><pre class="mermaid">
+sequenceDiagram
+    participant UI
+    participant API as InvestigationService
+    participant O as SentinelOrchestrator
+    participant T as ToolRegistry
+    participant G as TigerGraph
+    participant L as EvidenceLedger
+    participant R as GraphRagRetriever
+    participant M as LlmClient
+    participant P as PolicyEngine
+    participant W as WriteStep
+
+    UI-&gt;&gt;API: POST /api/investigations {case_id}
+    API--&gt;&gt;UI: 202 {run_id, stream_url}
+    UI-&gt;&gt;API: GET /investigations/{run_id}/events (SSE)
+    O-&gt;&gt;G: alert + txn_detail + card_baseline
+    O--&gt;&gt;UI: run.started (prior from trigger type)
+    O-&gt;&gt;M: plan(scope facts, tool schemas)
+    M--&gt;&gt;O: ordered tool plan
+    loop each planned tool
+        O-&gt;&gt;T: call(tool, args)
+        T-&gt;&gt;G: runInstalledQuery
+        G--&gt;&gt;T: rows
+        T--&gt;&gt;O: normalised DTO + ref
+        O--&gt;&gt;UI: tool.called {ref, summary}
+        O-&gt;&gt;L: post(feature, present, claim, ref)
+        O--&gt;&gt;UI: evidence.posted {lr, p_before, p_after}
+    end
+    O-&gt;&gt;R: retrieve(prior cases, policy chunks)
+    R--&gt;&gt;O: hybrid hits
+    O--&gt;&gt;UI: retrieval.completed
+    O-&gt;&gt;M: assess + adversarial pass
+    M--&gt;&gt;O: pattern, claims, summary
+    O-&gt;&gt;P: decide(state_initial)
+    P--&gt;&gt;O: initial recommendations + routes
+    O--&gt;&gt;UI: policy.evaluated {phase: initial}
+    alt stop test not satisfied
+        O-&gt;&gt;O: EvidenceSimulator.simulate()
+        O--&gt;&gt;UI: evidence.requested {basis, branch}
+        O-&gt;&gt;L: post_judgement(response)
+        O-&gt;&gt;P: decide(state_final)
+        O--&gt;&gt;UI: policy.evaluated {phase: final}
+    end
+    O-&gt;&gt;M: narrate(SAR, what_changed)
+    O-&gt;&gt;W: assemble + validate
+    W-&gt;&gt;G: upsert FraudCase + 6 edge types
+    O--&gt;&gt;UI: verdict.reached, case.written, validation.completed, run.completed
+</pre><p class="src">From docs/system/HLD.md</p></section>
+<section class="fig" id="hld-permission-sequence"><h2>The permission boundary</h2><pre class="mermaid">
+sequenceDiagram
+    participant A as Analyst (role: analyst)
+    participant API as ActionExecutionService
+    participant Perm as RoutePermissionPolicy
+    participant Appr as ApprovalService
+    participant M as Fraud manager (role: fraud_manager)
+    participant H as ActionHandler
+    participant Aud as AuditService
+
+    A-&gt;&gt;API: POST /actions/execute {BLOCK_CARD, case HHG-0NN}
+    API-&gt;&gt;Perm: assert_may_execute(analyst, BLOCK_CARD, exposure)
+    Perm--&gt;&gt;API: route = L2 — denied
+    API-&gt;&gt;Appr: enqueue (idempotent on case+action+phase)
+    API-&gt;&gt;Aud: audit {outcome: denied, route: L2}
+    API--&gt;&gt;A: 403 + required_route + roles_that_can_approve + approval_id
+    M-&gt;&gt;API: POST /approvals/{id}/decision {approve}
+    API-&gt;&gt;Perm: re-assert route at decision time
+    API-&gt;&gt;H: execute with approval_ref
+    H--&gt;&gt;API: simulated result
+    API-&gt;&gt;Aud: audit {outcome: executed, approval_ref}
+    API--&gt;&gt;M: 200 + execution
+</pre><p class="src">From docs/system/HLD.md</p></section>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+mermaid.initialize({startOnLoad:false, theme:"base", themeVariables:{fontFamily:"Segoe UI, system-ui, sans-serif", fontSize:"18px",
+ primaryColor:"#eef2f7", primaryBorderColor:"#2b3240", primaryTextColor:"#161a22", lineColor:"#5a6272",
+ clusterBkg:"#f7f8fb", clusterBorder:"#cfd5de", actorBkg:"#eef2f7", actorBorder:"#2b3240", noteBkgColor:"#fdf1e3"},
+ flowchart:{useMaxWidth:false, htmlLabels:true}, sequence:{useMaxWidth:false, actorMargin:40, messageFontSize:20, actorFontSize:18, noteFontSize:18, boxMargin:8, messageMargin:44}});
+mermaid.run().then(()=>{document.body.dataset.done="1"}).catch(e=>{document.body.dataset.done="err:"+e});
+</script></body></html>
