@@ -8,7 +8,58 @@ pair with approval routes, and a suspicious activity report when policy requires
 one — then writes the case back into the graph so the next investigation can
 find it.
 
-Built for the TigerGraph Agentic Fraud Investigation challenge, Hacker House Goa.
+Built for the TigerGraph Agentic Fraud Investigation challenge, Hacker House Goa,
+by **Team CollabUp**.
+
+## Links
+
+| | |
+|---|---|
+| 🔗 **Live app** | https://hackerhouse.collabup.co.in |
+| 📘 **API docs** | https://apihacker.collabup.co.in/api/docs |
+| 💻 **Code** | https://github.com/r-rishit27/hacker_house/tree/sentinel-v2 |
+| ✍️ **Write-up** | [Sentinel: an agentic fraud investigator on TigerGraph that knows when *not* to block](https://medium.com/@r.rishit27/sentinel-an-agentic-fraud-investigator-on-tigergraph-that-knows-when-not-to-block-41b8e706116e) |
+
+The TigerGraph Savanna workspace auto-stops when idle. The first request to the
+live app takes about 45 seconds while it wakes; after that it is warm.
+
+---
+
+## The console
+
+Every claim on the timeline carries the GSQL query that produced it, and the
+probability trajectory shows each finding moving the number. Here HHG-002 is
+held at 0.75 — `MONITOR_CARD` and `CREATE_CASE`, but no report, because the
+$292.36 exposure sits under the $1,000 threshold and nothing connects to a
+shared device or another customer's fraud.
+
+![The Sentinel analyst console, investigating HHG-002](docs/img/ui-console.jpg)
+
+The scorecard grades all twenty at once. Note the block rate of 10% against a
+50% ceiling, and nine cases honestly marked uncertain rather than forced into a
+verdict. The role switcher is what makes the approval boundary real — an analyst
+cannot execute an `L1` action.
+
+![The Monitor view: 20/20 valid, 10% block rate, the probability distribution](docs/img/ui-monitor.jpg)
+
+The Ring view is the one that reports a negative honestly. One device
+fingerprint carries 12 cards across 12 customers, 7 of them already closed as
+fraud by the bank, with $73,178.23 of exposure behind them — and Sentinel still
+answers **no ring**, because R6 is defined at one hop and that component only
+appears at two. The panel draws what the sweep saw and says why the rule does
+not fire, rather than inventing a ring out of a suggestive picture.
+
+![The Ring view: a 12-card device component that is still not a ring under R6](docs/img/ui-ring.png)
+
+---
+
+## Architecture
+
+Facts come from the graph, belief from a fitted evidence ledger, and decisions
+from a policy engine. The language model plans and narrates; it never picks an
+action or an approval route.
+
+![Sentinel architecture: the investigation layer, decision intelligence, case operations and the data foundation](docs/img/architecture.jpg)
 
 ---
 
@@ -166,9 +217,11 @@ filter the memory claim would be a leak rather than a capability.
 | [docs/system/EXECUTION_PLAN.md](docs/system/EXECUTION_PLAN.md) | Tasks, milestones, risks, the cut list |
 | [docs/HAND_INVESTIGATION.md](docs/HAND_INVESTIGATION.md) | HHG-003 worked by hand before any agent code was written |
 | [docs/CALIBRATION.md](docs/CALIBRATION.md) | How `fraud_probability` is fitted, and the selection-bias trap |
-| [docs/LOADING.md](docs/LOADING.md) | How the data gets into TigerGraph, and what had to be derived |
+| [docs/Data_loading_startergy.md](docs/Data_loading_startergy.md) | How the data gets into TigerGraph, and what had to be derived |
+| [docs/TOOLS_AND_MCP.md](docs/TOOLS_AND_MCP.md) | The 19 typed tools, the 26 GSQL queries, and the MCP server |
 | [frontend/DESIGN_SYSTEM.md](frontend/DESIGN_SYSTEM.md) | Tokens, semantics, components, contrast |
-| [deploy/README.md](deploy/README.md) | **Deploying it** — the API on EC2 behind nginx, the console on Amplify |
+| [deploy/Deployment_Doc.md](deploy/Deployment_Doc.md) | **Deploying it** — the API on EC2 behind nginx, the console on Amplify |
+| [docs/img/](docs/img/) | The architecture diagram and the console screenshots above |
 | `cases/` | **The deliverable** — one answer file per benchmark case |
 | `exploration/` | Autonomous findings. Never part of a graded answer |
 
