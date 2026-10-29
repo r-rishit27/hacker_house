@@ -24,7 +24,7 @@ dependencies = [
 
 [project.optional-dependencies]
 # The offline ETL and the one-shot loader scripts. Not on the agent's hot path.
-scripts = ["pyTigerGraph>=1.6", "duckdb>=1.0", "pandas>=2.2"]
+scripts = ["pyTigerGraph>=1.6", "duckdb>=1.0", "pandas>=2.2", "python-dotenv>=1.0"]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",

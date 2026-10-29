@@ -1,0 +1,74 @@
+// Sentinel v3 (Round 2): the read surface of the typology detectors.
+//
+// sentinel/typologies/ asks six questions of the transaction graph. Each is a
+// traversal here, so the decision layer reads TigerGraph — the graph is the
+// source of truth — and the local DuckDB lab is only a backtest mirror of it.
+// Facts, not verdicts: no threshold below decides anything.
+//
+//   ty_card_txns           a card's transactions before as-of      Card -MADE-> Transaction
+//   ty_device_txns         a device profile's transactions          DeviceProfile -DEVICE_USED_BY-> Transaction
+//   ty_recipient_txns      transactions paying one e-mail recipient EmailDomain -R_EMAIL_OF-> Transaction
+//   ty_band_txns           every transaction in an amount band      Transaction (scan, amount + time filter)
+//   ty_cards_closed_cases  closed cases on a set of cards           Card -CARD_IN_CC-> ClosedCase
+//   ty_cleared_like        cleared cases whose notes say a phrase   ClosedCase (scan, LIKE)
+//
+// Installed by: python scripts/install_queries.py --file queries/sentinel_queries_v3.gsql
+
+CREATE OR REPLACE QUERY ty_card_txns(VERTEX<Card> c_in, DATETIME until)
+  FOR GRAPH @GRAPHNAME@ SYNTAX v1 {
+  S = {c_in};
+  T = SELECT t FROM S:c -(MADE)-> Transaction:t WHERE t.ts < until;
+  PRINT T[T.txn_id, T.card_id, T.customer_id, T.ts, T.amt, T.product, T.channel, T.addr1,
+          T.p_email, T.r_email, T.device_key, T.device_new, T.proxy_flag, T.risk_score];
+}
+
+CREATE OR REPLACE QUERY ty_device_txns(VERTEX<DeviceProfile> d_in, DATETIME since, DATETIME until)
+  FOR GRAPH @GRAPHNAME@ SYNTAX v1 {
+  S = {d_in};
+  T = SELECT t FROM S:d -(DEVICE_USED_BY)-> Transaction:t WHERE t.ts >= since AND t.ts < until;
+  PRINT T[T.txn_id, T.card_id, T.customer_id, T.ts, T.amt, T.product, T.channel, T.addr1,
+          T.p_email, T.r_email, T.device_key, T.device_new, T.proxy_flag, T.risk_score];
+}
+
+CREATE OR REPLACE QUERY ty_recipient_txns(VERTEX<EmailDomain> e_in, DATETIME since, DATETIME until)
+  FOR GRAPH @GRAPHNAME@ SYNTAX v1 {
+  S = {e_in};
+  T = SELECT t FROM S:e -(R_EMAIL_OF)-> Transaction:t WHERE t.ts >= since AND t.ts < until;
+  PRINT T[T.txn_id, T.card_id, T.customer_id, T.ts, T.amt, T.product, T.channel, T.addr1,
+          T.p_email, T.r_email, T.device_key, T.device_new, T.proxy_flag, T.risk_score];
+}
+
+CREATE OR REPLACE QUERY ty_band_txns(DOUBLE lo, DOUBLE hi, DATETIME since, DATETIME until)
+  FOR GRAPH @GRAPHNAME@ SYNTAX v1 {
+  S = {Transaction.*};
+  T = SELECT t FROM S:t WHERE t.amt >= lo AND t.amt < hi AND t.ts >= since AND t.ts < until;
+  PRINT T[T.txn_id, T.card_id, T.customer_id, T.ts, T.amt, T.product, T.channel, T.addr1,
+          T.p_email, T.r_email, T.device_key, T.device_new, T.proxy_flag, T.risk_score];
+}
+
+CREATE OR REPLACE QUERY ty_cards_closed_cases(SET<VERTEX<Card>> cards, DATETIME before)
+  FOR GRAPH @GRAPHNAME@ SYNTAX v1 {
+  S = cards;
+  C = SELECT cc FROM S:c -(CARD_IN_CC)-> ClosedCase:cc WHERE cc.closed_at < before;
+  PRINT C[C.case_id, C.card_id, C.opened_at, C.outcome, C.pattern, C.exposure_usd, C.analyst_notes];
+}
+
+CREATE OR REPLACE QUERY ty_cleared_like(STRING phrase, DATETIME before, INT k)
+  FOR GRAPH @GRAPHNAME@ SYNTAX v1 {
+  S = {ClosedCase.*};
+  C = SELECT cc FROM S:cc
+      WHERE cc.outcome == "cleared" AND cc.closed_at < before AND cc.analyst_notes LIKE phrase
+      ORDER BY cc.opened_at DESC LIMIT k;
+  PRINT C[C.case_id, C.opened_at, C.analyst_notes];
+}
+
+// Precedent on the card itself: cases opened on it, and cases that named it as a
+// connected card (CC_CONNECTED_TO, read in reverse).
+CREATE OR REPLACE QUERY ty_card_prior_cases(VERTEX<Card> c_in, DATETIME before)
+  FOR GRAPH @GRAPHNAME@ SYNTAX v1 {
+  S = {c_in};
+  A = SELECT cc FROM S:c -(CARD_IN_CC)-> ClosedCase:cc WHERE cc.closed_at < before;
+  B = SELECT cc FROM S:c -(CC_CONNECTS)-> ClosedCase:cc WHERE cc.closed_at < before;
+  C = A UNION B;
+  PRINT C[C.case_id, C.card_id, C.opened_at, C.outcome, C.pattern, C.exposure_usd];
+}

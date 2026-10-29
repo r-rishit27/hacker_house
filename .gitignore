@@ -41,3 +41,10 @@ frontend/.next/
 
 # TypeScript incremental build state.
 frontend/tsconfig.tsbuildinfo
+
+# Round 2: regenerable or local-only
+data/staging_r2/
+data/*.log
+eval/out/
+eval/*.log
+updated_dataset/

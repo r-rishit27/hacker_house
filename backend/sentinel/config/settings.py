@@ -14,7 +14,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import AliasChoices, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 #: Repository root — backend/sentinel/config/settings.py -> up three.
@@ -39,7 +39,8 @@ class Settings(BaseSettings):
 
     # ── TigerGraph ───────────────────────────────────────────────────────────
     tg_host: str
-    tg_secret: SecretStr
+    #: Savanna's console labels the secret "key"; accept either name.
+    tg_secret: SecretStr = Field(validation_alias=AliasChoices("tg_secret", "tg_key"))
     tg_graph: str = "GRAPH_GOA"
     #: Savanna terminates both REST++ and GSQL on 443.
     tg_restpp_port: int = 443

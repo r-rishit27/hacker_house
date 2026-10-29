@@ -25,6 +25,24 @@ live app takes about 45 seconds while it wakes; after that it is warm.
 
 ---
 
+## Round 2 (final round)
+
+The decision layer was rebuilt after Round 1 scored 6/20, and the graph was
+rebuilt with January 2017 added. Start here:
+
+| | |
+|---|---|
+| **Run one case / the pack** | [docs/ROUND2_RUN.md](docs/ROUND2_RUN.md) — `python -m sentinel.typologies.run --pack case_pack_final.csv --case HHF-001 --out cases` |
+| **What changed and the evidence** | [docs/ROUND2_FINDINGS.md](docs/ROUND2_FINDINGS.md) |
+| **Resilience statement** | [docs/RESILIENCE.md](docs/RESILIENCE.md) |
+| **Innovation claim** | [docs/INNOVATION.md](docs/INNOVATION.md) |
+
+Round 1's twenty, scored against their real outcomes: **6 correct, 4 innocent
+customers blocked → 17 correct, 0 blocked**; on held-out cleared alerts the rules
+call 2.0% of innocent customers fraud.
+
+---
+
 ## The console
 
 Every claim on the timeline carries the GSQL query that produced it, and the

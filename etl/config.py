@@ -11,14 +11,15 @@ load_dotenv(ROOT / ".env")
 
 # --- TigerGraph Savanna -------------------------------------------------------
 TG_HOST = os.getenv("TG_HOST", "").rstrip("/")
-TG_SECRET = os.getenv("TG_SECRET", "")
+TG_SECRET = os.getenv("TG_SECRET") or os.getenv("TG_KEY", "")  # Savanna's console calls it the key
 TG_GRAPH = os.getenv("TG_GRAPH", "GRAPH_GOA")
 TG_RESTPP_PORT = os.getenv("TG_RESTPP_PORT", "443")
 TG_GSQL_PORT = os.getenv("TG_GSQL_PORT", "443")
 
 # --- Paths --------------------------------------------------------------------
 DATA = ROOT
-STAGING = ROOT / "data" / "staging"
+# Round 2 loads data/staging_r2 (Jul 2016 - Jan 2017) by setting STAGING_DIR.
+STAGING = Path(os.getenv("STAGING_DIR", str(ROOT / "data" / "staging")))
 GRAPH_DIR = ROOT / "graph"
 CASES_DIR = ROOT / "cases"
 

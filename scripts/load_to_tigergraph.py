@@ -258,6 +258,18 @@ EXPECTED_EDGES = {
 }
 
 
+# Round 2: July 2016 - January 2017 (data/staging_r2, built by stage_january.py),
+# computed from those staging files the same way. January writes empty fields as
+# a quoted "", which the loader's WHERE $n != "" treats as empty.
+if cfg.STAGING.name == "staging_r2":
+    EXPECTED = {**EXPECTED, "Transaction": 650938, "DeviceProfile": 9728, "BillingRegion": 333, "ClosedCase": 5585}
+    EXPECTED_EDGES = {
+        **EXPECTED_EDGES, "MADE": 650938, "NEXT": 636621, "OF_PRODUCT": 650938, "FROM_DEVICE": 156314,
+        "BILLED_IN": 580225, "PURCHASER_EMAIL": 544979, "RECIPIENT_EMAIL": 150068, "CC_INVOLVES": 15077,
+        "CC_ON_CARD": 5585, "CC_CONNECTED_TO": 130,
+    }
+
+
 def verify(conn, settle: int = 0) -> bool:
     banner("verification")
     if settle:
