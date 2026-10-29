@@ -99,6 +99,13 @@ table, `backend/api_v2/rbac.py`, checked by the server on every request:
 
 Every sign-in, failed attempt, lock-out and refused request is a ledger entry (case `_access`).
 
+## Restricted MCP tools
+
+`python backend/api_v2/mcp_server.py` (stdio; registered in `.mcp.json` as `sentinel-round2`)
+exposes five read-only tools: `card_history`, `device_history`, `ring_components`,
+`investigate_alert` (assessment only, nothing written) and `verify_audit`. There is no raw
+GSQL tool and no write tool; each call is recorded in the audit ledger.
+
 ## 3. The whole pack
 
 ```bash

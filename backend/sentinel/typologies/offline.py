@@ -132,19 +132,31 @@ def build_answer(
     if sar_file:
         first, last = txns[affected[0]], txns[affected[-1]]
         conn = list(d.connected_card_ids)
+        # Every sentence carries the ids or rule it rests on, in brackets before its full
+        # stop, so an examiner can re-query each claim (challenge 4).
+        hit = next((h for h in d.hits if h.strength >= 0.8), None)
+        block_route = next((r["route"] for r in final if r["action"] == "BLOCK_CARD"), "L1")
+        cite = lambda text, ref: f"{text.rstrip().rstrip('.')} [{ref}]."  # noqa: E731
+        ids = ", ".join(map(str, affected[:12]))
         sentences = [
-            f"This report concerns card {card_id} held by customer {customer_id}.",
-            f"Between {first.ts:%Y-%m-%d} and {last.ts:%Y-%m-%d}, {len(affected)} transaction(s) totalling "
-            f"${exposure:,.2f} were identified as fraudulent: {', '.join(map(str, affected[:12]))}.",
-            (f"The activity follows a pattern not covered by the bank's documented typologies: {d.pattern_description}"
-             if d.pattern == "undocumented" else f"The activity matches the documented pattern {d.pattern}."),
-            (f"The same activity links to {len(conn)} other card(s) through {initial_state.shared_origin_kind}, "
-             f"including {', '.join(conn[:6])}." if conn else
-             "No other card was found sharing a device profile, recipient or burst with this activity."),
-            f"The first suspicious transaction was {affected[0]} on {first.ts:%Y-%m-%d %H:%M}.",
-            f"Policy section 3a requires this filing because {sar_reason[len('3a: fraud confirmed or strongly suspected and '):].rstrip('.') or 'its conditions are met'}.",
-            "The card has been recommended for blocking and connected cards for monitoring.",
-            "All transaction identifiers cited above exist in the bank's records and can be re-queried.",
+            cite(f"This report concerns card {card_id} held by customer {customer_id}", f"card {card_id}; customer {customer_id}"),
+            cite(f"Between {first.ts:%Y-%m-%d} and {last.ts:%Y-%m-%d}, {len(affected)} transaction(s) totalling "
+                 f"${exposure:,.2f} were identified as fraudulent", f"txn {ids}"),
+            cite(f"The activity follows a pattern not covered by the bank's documented typologies: {d.pattern_description}"
+                 if d.pattern == "undocumented" else f"The activity matches the documented pattern {d.pattern}",
+                 f"detector {hit.key}, txn {', '.join(map(str, hit.txn_ids[:8]))}" if hit else f"decision {d.decided_by}"),
+            cite(f"The same activity links to {len(conn)} other card(s) through {initial_state.shared_origin_kind}, "
+                 f"including {', '.join(conn[:6])}" if conn else
+                 "No other card was found sharing a device profile, recipient or burst with this activity",
+                 (f"shared {hit.shared}; cards {', '.join(conn[:6])}" if hit and conn else f"card {card_id}")),
+            cite(f"The first suspicious transaction was {affected[0]} on {first.ts:%Y-%m-%d %H:%M}", f"txn {affected[0]}"),
+            cite(f"Policy section 3a requires this filing because "
+                 f"{sar_reason[len('3a: fraud confirmed or strongly suspected and '):].rstrip('.') or 'its conditions are met'}",
+                 "Fraud Policy v1.0, section 3a"),
+            cite("The card has been recommended for blocking and connected cards for monitoring",
+                 f"BLOCK_CARD {block_route}, MONITOR_CONNECTED_CARDS auto, awaiting approval"),
+            cite("All transaction identifiers cited above exist in the bank's records and can be re-queried",
+                 f"{dataset}; ty_card_txns(card_id={card_id}, until={as_of:%Y-%m-%d %H:%M:%S})"),
         ]
         sar.update(narrative=" ".join(s.strip() for s in sentences), subjects=[customer_id, card_id, *conn[:10]],
                    total_amount_usd=exposure, activity_dates=[f"{first.ts:%Y-%m-%d}", f"{last.ts:%Y-%m-%d}"])

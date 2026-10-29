@@ -4,6 +4,12 @@
       "command": "/Users/subhash/hacker_house/.venv/bin/tigergraph-mcp",
       "args": [],
       "env": {}
+    },
+    "sentinel-round2": {
+      "command": "python",
+      "args": [
+        "backend/api_v2/mcp_server.py"
+      ]
     }
   }
 }
