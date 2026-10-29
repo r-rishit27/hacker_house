@@ -21,6 +21,7 @@ class DuckTxnSource:
     def __init__(self, path: str | Path, *, read_only: bool = True) -> None:
         self.con = duckdb.connect(str(path), read_only=read_only)
         self.calls = 0
+        self.recorder = None
         #: Named in every evidence ref, so a judge knows which store produced the claim.
         self.label = "lab.duckdb mirror (Jul 2016 - Jan 2017, closed_cases_history 5,585)"
         #: The earliest transaction: no "before" window may reach past it.
@@ -28,8 +29,10 @@ class DuckTxnSource:
 
     def _rows(self, where: str, params: list) -> list[Txn]:
         self.calls += 1
-        rows = self.con.execute(f"SELECT {_COLS} FROM txn WHERE {where} ORDER BY ts, txn_id", params).fetchall()
-        return [Txn(*r) for r in rows]
+        rows = [Txn(*r) for r in self.con.execute(f"SELECT {_COLS} FROM txn WHERE {where} ORDER BY ts, txn_id", params).fetchall()]
+        if self.recorder:
+            self.recorder(f"lab:txn WHERE {where}", {f"p{i}": v for i, v in enumerate(params)}, rows)
+        return rows
 
     def card_txns(self, card_id: str, until: datetime) -> list[Txn]:
         return self._rows("card_id = ? AND ts < ?", [card_id, until])

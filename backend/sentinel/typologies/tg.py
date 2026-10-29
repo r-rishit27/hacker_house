@@ -55,8 +55,19 @@ class TigerGraphTxnSource:
                 raise GraphUnavailable(f"cannot connect to TigerGraph: {type(exc).__name__}: {exc}") from exc
         self.conn = conn
         self.calls = 0
+        #: Set by the runner: called with (query, params, rows) for every query, for the audit trail.
+        self.recorder = None
         self.label = f"TigerGraph {getattr(conn, 'graphname', 'GRAPH_GOA')} (v3 queries ty_*)"
         self.data_start = datetime.fromisoformat(os.getenv("DATA_START", "2016-07-02 00:02:21"))
+
+    @property
+    def vector(self):
+        """GraphRAG precedent over ClosedCase.emb, loaded from this graph on first use."""
+        if getattr(self, "_vector", None) is None:
+            from sentinel.typologies.vector import VectorPrecedent
+
+            self._vector = VectorPrecedent(self.conn) if os.getenv("OPENAI_EMBEDDING_MODEL") else None
+        return self._vector
 
     # -- transport ----------------------------------------------------------
     def _q(self, name: str, params: dict, key: str) -> list[dict]:
@@ -68,8 +79,24 @@ class TigerGraphTxnSource:
         for block in res:
             if key in block:
                 # PRINT V[V.attr, ...] returns keys as "V.attr"; strip the alias.
-                return [{k.split(".", 1)[-1]: val for k, val in v["attributes"].items()} for v in block[key]]
+                rows = [{k.split(".", 1)[-1]: val for k, val in v["attributes"].items()} for v in block[key]]
+                if self.recorder:
+                    self.recorder(name, params, rows)
+                return rows
         raise GraphUnavailable(f"query {name} returned no '{key}' block")
+
+    def _raw(self, name: str, params: dict) -> dict[str, list[dict]]:
+        """Every printed block of a query, alias prefixes stripped."""
+        self.calls += 1
+        try:
+            res = self.conn.runInstalledQuery(name, params=params, timeout=120_000)
+        except Exception as exc:
+            raise GraphUnavailable(f"query {name} failed: {type(exc).__name__}: {str(exc)[:200]}") from exc
+        out = {k: [{a.split(".", 1)[-1]: v for a, v in x["attributes"].items()} for x in vs]
+               for block in res for k, vs in block.items()}
+        if self.recorder:
+            self.recorder(name, params, [r for vs in out.values() for r in vs])
+        return out
 
     @staticmethod
     def _t(d: datetime) -> str:
@@ -109,10 +136,18 @@ class TigerGraphTxnSource:
 
     # -- precedent ------------------------------------------------------------
     def prior_cases(self, card: str, before: datetime) -> list[dict]:
-        rows = self._q("ty_card_prior_cases", {"c_in": (card,), "before": self._t(before)}, "C")
-        rows.sort(key=lambda c: (c["opened_at"], c["case_id"]))
+        """The bank's closed cases on the card, then Sentinel's own written-back cases.
+
+        Ours carry ``outcome = "sentinel:<verdict>"``: precedent to read, never
+        mistaken for the bank's confirmed outcome by a rule."""
+        res = self._raw("ty_card_prior_cases", {"c_in": (card,), "before": self._t(before)})
         keys = ("case_id", "card_id", "opened_at", "outcome", "pattern", "exposure_usd")
-        return [{k: c[k] for k in keys} for c in rows][-8:]
+        rows = sorted(res.get("C", []), key=lambda c: (c["opened_at"], c["case_id"]))
+        bank = [{k: c[k] for k in keys} for c in rows][-8:]
+        ours = [{"case_id": f["case_id"], "card_id": f["card_id"], "opened_at": f["created_at"],
+                 "outcome": f"sentinel:{f['verdict']}", "pattern": f["pattern"], "exposure_usd": f["exposure_usd"]}
+                for f in res.get("F", [])]
+        return bank + ours[-4:]
 
     CLEARED_PHRASES = {
         "device_new": ["%new phone%", "%Device marked New%"],

@@ -71,4 +71,7 @@ CREATE OR REPLACE QUERY ty_card_prior_cases(VERTEX<Card> c_in, DATETIME before)
   B = SELECT cc FROM S:c -(CC_CONNECTS)-> ClosedCase:cc WHERE cc.closed_at < before;
   C = A UNION B;
   PRINT C[C.case_id, C.card_id, C.opened_at, C.outcome, C.pattern, C.exposure_usd];
+  // Sentinel's own earlier cases on this card: the memory the write-back creates.
+  F = SELECT f FROM S:c -(CARD_IN_CASE)-> FraudCase:f WHERE f.created_at < before;
+  PRINT F[F.case_id, F.card_id, F.created_at, F.verdict, F.pattern, F.exposure_usd];
 }

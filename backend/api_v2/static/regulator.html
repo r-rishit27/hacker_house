@@ -1,0 +1,443 @@
+<title>Sentinel Examiner Register</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: an examiner's case register — the register of investigations on the left,
+   the open dossier on the right, a guided walkthrough as the dossier's first tab. */
+:root {
+  --paper: #f2f4f6; --sheet: #ffffff; --ink: #14202b; --muted: #5a6776; --rule: #d3dae2;
+  --seal: #0e5a6b; --seal-soft: #e1eef1;
+  --ok: #1d7448; --ok-soft: #e3f2e9; --warn: #9a5b00; --warn-soft: #fbefdc; --bad: #b0281f; --bad-soft: #fbe5e3;
+  --f-display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --r: 6px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #0f161d; --sheet: #16202a; --ink: #e5ebf1; --muted: #93a1b0; --rule: #2a3744;
+  --seal: #5cc1d4; --seal-soft: #13323a; --ok: #5fcf92; --ok-soft: #12301f; --warn: #f0b45a; --warn-soft: #3a2a10;
+  --bad: #ff8a80; --bad-soft: #3d1715; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --paper: #0f161d; --sheet: #16202a; --ink: #e5ebf1; --muted: #93a1b0; --rule: #2a3744;
+  --seal: #5cc1d4; --seal-soft: #13323a; --ok: #5fcf92; --ok-soft: #12301f; --warn: #f0b45a; --warn-soft: #3a2a10;
+  --bad: #ff8a80; --bad-soft: #3d1715; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--paper); color: var(--ink); font: 15px/1.5 var(--f-body); margin: 0 }
+.wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 40px; max-width: 1360px; margin: 0 auto; display: grid; gap: 18px }
+h1, h2, h3 { font-family: var(--f-display); font-stretch: 85%; text-wrap: balance; margin: 0; letter-spacing: .005em }
+h1 { font-size: 1.7rem; font-weight: 800 } h2 { font-size: 1.15rem; font-weight: 700 } h3 { font-size: .98rem; font-weight: 700 }
+.eyebrow { font: 600 .7rem/1 var(--f-body); letter-spacing: .12em; text-transform: uppercase; color: var(--muted) }
+.mono { font-family: var(--f-mono); font-size: .82em }
+.muted { color: var(--muted) }
+button, select, input { font: inherit; color: inherit }
+button { cursor: pointer }
+:focus-visible { outline: 2px solid var(--seal); outline-offset: 2px }
+
+/* header */
+.top { display: flex; flex-wrap: wrap; gap: 14px 24px; align-items: end; justify-content: space-between; border-bottom: 2px solid var(--ink); padding-bottom: 14px }
+.top .meta { display: flex; gap: 18px; flex-wrap: wrap; align-items: center }
+.seal { display: inline-flex; align-items: center; gap: 10px; padding: 8px 12px; border: 1.5px solid currentColor; border-radius: 999px; font-weight: 600; font-size: .85rem }
+.seal.ok { color: var(--ok); background: var(--ok-soft) } .seal.bad { color: var(--bad); background: var(--bad-soft) } .seal.wait { color: var(--muted) }
+.seal svg { width: 16px; height: 16px; flex: none }
+.btn { border: 1px solid var(--rule); background: var(--sheet); border-radius: var(--r); padding: 7px 12px; font-weight: 600; font-size: .85rem }
+.btn:hover { border-color: var(--seal); color: var(--seal) }
+.btn.primary { background: var(--seal); border-color: var(--seal); color: var(--sheet) }
+.btn.primary:hover { filter: brightness(1.08); color: var(--sheet) }
+
+/* summary strip */
+.strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: var(--r); overflow: hidden }
+.stat { background: var(--sheet); padding: 12px 14px; display: grid; gap: 2px }
+.stat b { font: 700 1.5rem/1.1 var(--f-display); font-stretch: 80%; font-variant-numeric: tabular-nums }
+.stat span { font-size: .8rem; color: var(--muted) }
+
+/* main grid */
+.main { display: grid; grid-template-columns: minmax(270px, 340px) minmax(0, 1fr); gap: 18px; align-items: start }
+@media (max-width: 860px) { .main { grid-template-columns: 1fr } }
+.panel { background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r) }
+.register { position: sticky; top: env(safe-area-inset-top, 0px); max-height: calc(100vh - 24px); overflow: auto }
+@media (max-width: 860px) { .register { position: static; max-height: 360px } }
+.register header { padding: 12px 14px; border-bottom: 1px solid var(--rule); display: grid; gap: 8px }
+.register input { width: 100%; padding: 7px 10px; border: 1px solid var(--rule); border-radius: var(--r); background: var(--paper) }
+.case { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 10px 14px; border-bottom: 1px solid var(--rule); cursor: pointer; border-left: 3px solid transparent; width: 100%; text-align: left; background: none; border-top: 0; border-right: 0 }
+.case:hover { background: var(--paper) }
+.case[aria-current="true"] { border-left-color: var(--seal); background: var(--seal-soft) }
+.case .id { font: 600 .92rem var(--f-mono) }
+.case .sub { grid-column: 1 / -1; font-size: .78rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 10px }
+.chip { display: inline-block; padding: 1px 8px; border-radius: 999px; font: 600 .72rem/1.6 var(--f-body); letter-spacing: .02em; white-space: nowrap }
+.v-fraud { background: var(--bad-soft); color: var(--bad) } .v-legitimate { background: var(--ok-soft); color: var(--ok) }
+.v-uncertain { background: var(--warn-soft); color: var(--warn) } .v-failed { background: var(--bad); color: var(--sheet) }
+.route { font-family: var(--f-mono); font-size: .72rem; border: 1px solid var(--rule); border-radius: 4px; padding: 0 5px }
+
+/* dossier */
+.dossier { display: grid; gap: 0; min-width: 0 }
+.dhead { padding: 16px 18px; border-bottom: 1px solid var(--rule); display: grid; gap: 10px }
+.dhead .row { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: baseline }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px 18px }
+.fact { display: grid; gap: 1px } .fact dt { font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted) } .fact dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere }
+.tabs { display: flex; gap: 2px; padding: 0 12px; border-bottom: 1px solid var(--rule); overflow-x: auto }
+.tab { border: 0; background: none; padding: 11px 12px; font-weight: 600; font-size: .88rem; color: var(--muted); border-bottom: 2px solid transparent; white-space: nowrap }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--seal) }
+.tabbody { padding: 18px; display: grid; gap: 16px; min-width: 0 }
+
+/* walkthrough */
+.steps { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px }
+@media (max-width: 640px) { .steps { grid-template-columns: repeat(3, 1fr) } }
+.step { border: 1px solid var(--rule); background: var(--paper); border-radius: var(--r); padding: 8px; text-align: left; display: grid; gap: 2px; font-size: .78rem }
+.step b { font: 700 .82rem var(--f-display); font-stretch: 85% }
+.step[aria-current="true"] { border-color: var(--seal); background: var(--seal-soft) }
+.step .n { font: 500 .7rem var(--f-mono); color: var(--muted) }
+.lead { font-size: 1.02rem; max-width: 72ch }
+.q { border-left: 3px solid var(--seal); padding: 4px 0 4px 12px; color: var(--muted); font-style: italic; max-width: 72ch }
+.nav { display: flex; gap: 8px; justify-content: space-between; flex-wrap: wrap }
+
+/* ledger entries */
+.entries { display: grid; gap: 0; border: 1px solid var(--rule); border-radius: var(--r); overflow: hidden }
+.entry { display: grid; grid-template-columns: 64px minmax(0, 1fr); border-bottom: 1px solid var(--rule); background: var(--sheet) }
+.entry:last-child { border-bottom: 0 }
+.entry .seq { font: 500 .78rem var(--f-mono); color: var(--muted); padding: 10px 0 10px 12px; border-right: 1px solid var(--rule) }
+.entry .body { padding: 10px 12px; display: grid; gap: 4px; min-width: 0 }
+.entry .line1 { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline }
+.kind { font: 600 .78rem var(--f-mono); color: var(--seal) }
+.entry.k-approval-denied .kind, .entry.k-case-failed .kind { color: var(--bad) }
+.entry.k-approval-granted .kind { color: var(--ok) }
+.entry .what { overflow-wrap: anywhere }
+.entry details summary { cursor: pointer; font-size: .78rem; color: var(--muted) }
+pre { margin: 6px 0 0; padding: 10px; background: var(--paper); border-radius: 4px; overflow-x: auto; font: .76rem/1.45 var(--f-mono); max-height: 320px }
+.hash { font: .72rem var(--f-mono); color: var(--muted); overflow-wrap: anywhere }
+.hash.ok::before { content: "✓ "; color: var(--ok) } .hash.bad::before { content: "✗ "; color: var(--bad) }
+
+/* approval chain */
+.chain { display: grid; gap: 12px }
+.req { border: 1px solid var(--rule); border-radius: var(--r); padding: 12px 14px; display: grid; gap: 10px }
+.req .hd { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center }
+.trail { display: grid; gap: 0; border-left: 2px solid var(--rule); margin-left: 6px }
+.tnode { position: relative; padding: 4px 0 10px 18px; font-size: .88rem }
+.tnode::before { content: ""; position: absolute; left: -7px; top: 9px; width: 12px; height: 12px; border-radius: 50%; background: var(--sheet); border: 2px solid var(--muted) }
+.tnode.granted::before { border-color: var(--ok); background: var(--ok) } .tnode.denied::before { border-color: var(--bad); background: var(--bad-soft) }
+.tnode.rejected::before { border-color: var(--bad); background: var(--bad) } .tnode.pending::before { border-style: dashed }
+.tnode .who { font-weight: 600 }
+
+table { border-collapse: collapse; width: 100%; font-size: .85rem }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--rule); vertical-align: top }
+th { font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600 }
+td { font-variant-numeric: tabular-nums }
+.tablewrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: var(--r) }
+.sev-breaking { color: var(--bad); font-weight: 600 } .sev-review { color: var(--warn); font-weight: 600 }
+.empty { padding: 30px 18px; color: var(--muted) }
+.bars { display: grid; gap: 6px }
+.bar { display: grid; grid-template-columns: 150px 1fr 48px; gap: 10px; align-items: center; font-size: .82rem }
+.bar .track { height: 10px; background: var(--paper); border-radius: 5px; overflow: hidden; border: 1px solid var(--rule) }
+.bar .fill { height: 100%; background: var(--seal) }
+.bar .fill.hi { background: var(--bad) } .bar .fill.lo { background: var(--ok) }
+.note { font-size: .8rem; color: var(--muted); max-width: 80ch }
+.tok { display: flex; gap: 6px; flex-wrap: wrap; align-items: center }
+.tok input { width: 220px; max-width: 100%; padding: 6px 9px; border: 1px solid var(--rule); border-radius: var(--r); background: var(--sheet) }
+@media (prefers-reduced-motion: no-preference) { .tabbody { animation: fade .18s ease-out } @keyframes fade { from { opacity: .4 } to { opacity: 1 } } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div style="display:grid;gap:6px">
+      <span class="eyebrow">Fraud operations · Examination file</span>
+      <h1>Sentinel Examiner Register</h1>
+      <span class="muted" id="sourceLine">Loading the investigation record…</span>
+    </div>
+    <div class="meta">
+      <span class="seal wait" id="seal" role="status"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span id="sealText">Chain not yet checked</span></span>
+      <button class="btn primary" id="verifyBtn" type="button">Re-verify chain in this browser</button>
+      <span class="tok" id="tokBox" hidden><label for="tok" class="muted">Token</label><input id="tok" type="password" placeholder="sv1… (examiner identity)"><button class="btn" id="tokGo" type="button">Load</button></span>
+    </div>
+  </header>
+
+  <section class="strip" id="strip" aria-label="Summary"></section>
+
+  <div class="main">
+    <aside class="panel register" aria-label="Investigations">
+      <header>
+        <h2>Investigations</h2>
+        <input id="filter" type="search" placeholder="Filter by case, verdict, status…" aria-label="Filter investigations">
+      </header>
+      <div id="list"></div>
+    </aside>
+    <main class="panel dossier" id="dossier" aria-live="polite"><div class="empty">Select an investigation to open its file.</div></main>
+  </div>
+
+  <section class="panel" aria-label="Change record">
+    <div class="dhead"><span class="eyebrow">Across all investigations</span><h2>Change record</h2>
+      <p class="note">Every change to data, configuration and case status, in the order it happened. Data changes cannot be acted on until a team lead or fraud manager approves the exact drift report; each status change names who made it.</p></div>
+    <div class="tabbody" id="changes"></div>
+  </section>
+  <p class="note">Each ledger entry stores the SHA-256 of the entry before it. Editing, removing or reordering any past entry breaks every hash after it. "Re-verify" recomputes all of them here, from the raw ledger, without trusting the server's own check.</p>
+</div>
+
+<script>
+(() => {
+  const SNAP = window.__SNAPSHOT__ || null;
+  const $ = (s, r = document) => r.querySelector(s);
+  const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const money = (n) => n == null ? "—" : "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const pct = (n) => n == null ? "—" : (Number(n) * 100).toFixed(0) + "%";
+  const when = (s) => s ? String(s).replace("T", " ").slice(0, 19) : "—";
+  let token = "", summary = null, current = null, cache = {}, tab = "walk", stepIx = 0, chainState = null;
+
+  const api = async (path, text = false) => {
+    if (SNAP) {
+      if (path === "/v2/summary") return SNAP.summary;
+      if (path === "/v2/ledger") return SNAP.ledger;
+      if (path === "/v2/changes") return SNAP.changes;
+      const m = path.match(/^\/v2\/investigations\/(.+)$/); if (m) return SNAP.investigations[decodeURIComponent(m[1])];
+    }
+    const r = await fetch(path + (token ? (path.includes("?") ? "&" : "?") + "token=" + encodeURIComponent(token) : ""));
+    if (r.status === 401) { $("#tokBox").hidden = false; throw new Error("This server requires an examiner token. Paste one above and choose Load."); }
+    if (!r.ok) throw new Error(`${path} answered ${r.status}`);
+    return text ? r.text() : r.json();
+  };
+
+  // ---- independent chain verification (Web Crypto) ----
+  async function sha256(s) {
+    const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+    return [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
+  }
+  async function verifyChain() {
+    const seal = $("#seal"), txt = $("#sealText");
+    seal.className = "seal wait"; txt.textContent = "Recomputing…";
+    try {
+      const raw = await api("/v2/ledger", true);
+      const lines = raw.split("\n").filter((l) => l.trim());
+      let prev = "0".repeat(64), broken = null; const ok = {};
+      for (const line of lines) {
+        const e = JSON.parse(line);
+        const body = line.replace(`"hash":"${e.hash}",`, "");
+        const want = await sha256(prev + body);
+        if (e.prev_hash !== prev || e.hash !== want) { broken = e; break; }
+        ok[e.seq] = true; prev = e.hash;
+      }
+      chainState = { n: lines.length, broken, ok };
+      if (broken) { seal.className = "seal bad"; txt.textContent = `Chain broken at entry #${broken.seq} (${broken.case_id})`; }
+      else { seal.className = "seal ok"; txt.textContent = `Chain intact · ${lines.length} entries recomputed here`; }
+      seal.querySelector("svg").innerHTML = broken
+        ? '<circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 5.5l5 5m0-5l-5 5" stroke="currentColor" stroke-width="1.6"/>'
+        : '<circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4.8 8.2l2.2 2.2 4.2-4.6" fill="none" stroke="currentColor" stroke-width="1.6"/>';
+      if (current) renderDossier();
+    } catch (err) { seal.className = "seal bad"; txt.textContent = err.message; }
+  }
+
+  // ---- register ----
+  function verdictChip(r) {
+    if (r.failed && !r.verdict) return '<span class="chip v-failed">failed closed</span>';
+    return r.verdict ? `<span class="chip v-${esc(r.verdict)}">${esc(r.verdict)}</span>` : "";
+  }
+  function renderStrip() {
+    const rows = summary.investigations;
+    const count = (f) => rows.filter(f).length;
+    const pending = rows.reduce((a, r) => a + r.pending.length, 0);
+    const denied = rows.reduce((a, r) => a + r.denied_attempts, 0);
+    const stats = [
+      [rows.length, "investigations on file"],
+      [count((r) => r.verdict === "fraud"), "concluded fraud"],
+      [count((r) => r.verdict === "legitimate"), "cleared as legitimate"],
+      [count((r) => r.verdict === "uncertain"), "uncertain, escalated"],
+      [pending, "approvals awaiting a human"],
+      [denied, "approval attempts refused"],
+      [count((r) => r.written_to_graph), "written to the graph, read back"],
+      [rows.reduce((a, r) => a + r.queries, 0), "graph queries recorded"],
+    ];
+    $("#strip").innerHTML = stats.map(([b, s]) => `<div class="stat"><b>${b}</b><span>${s}</span></div>`).join("");
+  }
+  function renderList() {
+    const q = $("#filter").value.toLowerCase();
+    const rows = summary.investigations.filter((r) => !q || JSON.stringify([r.case_id, r.verdict, r.status, r.pattern]).toLowerCase().includes(q));
+    $("#list").innerHTML = rows.map((r) => `
+      <button class="case" type="button" data-id="${esc(r.case_id)}" aria-current="${current === r.case_id}">
+        <span class="id">${esc(r.case_id)}</span>${verdictChip(r)}
+        <span class="sub"><span>${esc(r.status || "—")}</span><span>${r.steps} entries</span>
+          ${r.pending.length ? `<span style="color:var(--warn)">${r.pending.length} awaiting approval</span>` : ""}
+          ${r.denied_attempts ? `<span style="color:var(--bad)">${r.denied_attempts} refused</span>` : ""}
+          ${r.sar_filed ? "<span>report filed</span>" : ""}</span>
+      </button>`).join("") || '<div class="empty">No investigation matches.</div>';
+  }
+
+  // ---- dossier ----
+  const STEPS = [
+    ["The alert", "What arrived, when, and from whom."],
+    ["What it looked at", "Every query the agent ran, with its parameters."],
+    ["What it found", "Detectors, history checks, the decision model."],
+    ["What it decided", "Verdict, actions before and after evidence, the report decision."],
+    ["Who approved", "Each L1/L2 action, every attempt, every approver."],
+    ["Is the record intact", "Hash chain and graph read-back."],
+  ];
+  const KIND_TEXT = {
+    "case.opened": (d) => `Alert ${esc(d.alert?.trigger_type)} on card ${esc(d.alert?.card_id)}, flagged transaction ${esc(d.alert?.flagged_txn_id)}. Code ${esc(d.code_version)}, source ${esc(d.source)}.`,
+    "step.query": (d) => `<span class="mono">${esc(d.query)}</span>(${esc(Object.entries(d.params || {}).map(([k, v]) => `${k}=${Array.isArray(v) ? v.join(",") : v}`).join(", "))}) → ${d.n_rows} row(s), digest <span class="mono">${esc(d.result_digest)}</span>`,
+    "step.detector": (d) => `<b>${esc(d.detector)}</b> (strength ${esc(d.strength)}): ${esc(d.description)}`,
+    "step.history_check": (d) => `Unexplained: ${esc((d.unexplained || []).join("; ") || "nothing")}. Explained by the card's own history: ${esc((d.explained_by_history || []).join("; ") || "nothing")}.${d.injection_spans?.length ? ` Instruction-like text in the alert, treated as data: “${esc(d.injection_spans.join("”, “"))}”.` : ""}`,
+    "step.model": (d) => `${esc(d.model)} via ${esc(d.endpoint)} → ${d.probabilities ? Object.entries(d.probabilities).map(([k, v]) => `${esc(k)} ${pct(v)}`).join(" · ") : "no scores"}${d.accepted ? "" : ` — rejected: ${esc(d.rejected_because)}`}`,
+    "decision": (d) => `<b>${esc(d.verdict)}</b> at ${pct(d.fraud_probability)}, decided by <span class="mono">${esc(d.decided_by)}</span>. ${esc((d.reasons || [])[0] || "")}`,
+    "policy.initial": (d) => `Before evidence: ${actionsText(d.actions)}`,
+    "evidence.requested": (d) => `Asked (${esc(d.type)}): ${esc(d.assumed_response)}`,
+    "policy.final": (d) => `After evidence: ${actionsText(d.actions)}. Report: ${d.sar?.file ? "file" : "do not file"} — ${esc(d.sar?.reason)}`,
+    "containment.planned": (d) => `Block ${d.n_blocked}, monitor ${d.n_monitored}; cuts ${money(d.exposure_cut)} (${pct(d.coverage)}) of ring exposure; disrupts ${d.customers_disrupted?.length ?? 0} cardholder(s).`,
+    "approval.requested": (d) => `${esc(d.action)} <span class="route">${esc(d.route)}</span> needs ${esc((d.approvers || []).join(" or "))}.`,
+    "approval.denied": (d) => `Refused: ${esc(d.action)} — ${esc(d.why)}`,
+    "approval.granted": (d) => `Approved ${esc(d.action)} <span class="route">${esc(d.route)}</span>${d.note ? ` — “${esc(d.note)}”` : ""}`,
+    "approval.rejected": (d) => `Rejected ${esc(d.action)}${d.note ? ` — “${esc(d.note)}”` : ""}`,
+    "answer.produced": (d) => `Answer file produced, status ${esc(d.status)}, digest <span class="mono">${esc(d.answer_digest)}</span>; ${d.graph_queries} queries, ${d.model_tokens} model tokens, ${d.latency_s}s.`,
+    "graph.write_back": (d) => d.ok ? `Written to the graph as <span class="mono">${esc(d.graph_case_id)}</span> and read back: ${esc(Object.entries(d.edges || {}).map(([k, v]) => `${k} ${v}`).join(", "))}.` : `Not written: ${esc(d.error)}`,
+    "status.changed": (d) => `Status ${d.from ? esc(d.from) + " → " : "→ "}<b>${esc(d.to)}</b>${d.verdict ? ` (${esc(d.verdict)})` : ""}`,
+    "case.failed": (d) => `Failed closed: ${esc(d.error)}. Nothing was written.`,
+  };
+  const actionsText = (a) => (a || []).map((r) => `${esc(r.action)} <span class="route">${esc(r.route)}</span>`).join(", ") || "none";
+  const STEP_KINDS = [["case.opened"], ["step.query"], ["step.detector", "step.history_check", "step.model", "containment.planned"],
+    ["decision", "policy.initial", "evidence.requested", "policy.final", "answer.produced"],
+    ["approval.requested", "approval.denied", "approval.granted", "approval.rejected", "status.changed"], ["graph.write_back", "case.failed"]];
+
+  function entryHTML(e) {
+    const f = KIND_TEXT[e.kind] || (() => "");
+    const hv = chainState ? (chainState.ok[e.seq] ? "ok" : "bad") : "";
+    return `<div class="entry k-${e.kind.replace(".", "-")}">
+      <div class="seq">#${String(e.seq).padStart(3, "0")}</div>
+      <div class="body"><div class="line1"><span class="kind">${esc(e.kind)}</span><span class="muted" style="font-size:.78rem">${when(e.at)} · ${esc(e.actor)} (${esc(e.role)})</span></div>
+        <div class="what">${f(e.data || {})}</div>
+        <details><summary>Record and hash</summary><pre>${esc(JSON.stringify(e.data, null, 1))}</pre>
+          <div class="hash ${hv}">hash ${esc(e.hash)}</div><div class="hash">prev ${esc(e.prev_hash)}</div></details></div></div>`;
+  }
+  const entriesHTML = (list) => list.length ? `<div class="entries">${list.map(entryHTML).join("")}</div>` : '<p class="muted">No entries of this kind.</p>';
+
+  function approvalChainHTML(entries) {
+    const reqs = entries.filter((e) => e.kind === "approval.requested");
+    if (!reqs.length) return '<p class="muted">This investigation recommended no L1 or L2 action, so nothing needed a human approval.</p>';
+    return `<div class="chain">${reqs.map((r) => {
+      const a = r.data.action;
+      const after = entries.filter((e) => e.seq > r.seq && e.data?.action === a && e.kind.startsWith("approval."));
+      const fin = after.find((e) => e.kind === "approval.granted" || e.kind === "approval.rejected");
+      const nodes = [`<div class="tnode"><span class="who">Requested by ${esc(r.actor)}</span> · #${r.seq} · ${when(r.at)}<br><span class="muted">${esc(r.data.reason)}</span></div>`,
+        ...after.map((e) => `<div class="tnode ${e.kind === "approval.granted" ? "granted" : e.kind === "approval.denied" ? "denied" : "rejected"}">
+          <span class="who">${esc(e.actor)}</span> <span class="muted">(${esc(e.role)})</span> · #${e.seq} · ${when(e.at)}<br>${KIND_TEXT[e.kind](e.data)}</div>`),
+        ...(fin ? [] : ['<div class="tnode pending"><span class="who">Awaiting approval</span><br><span class="muted">No action has been taken on the card.</span></div>'])];
+      return `<div class="req"><div class="hd"><h3>${esc(a)}</h3><span class="route">${esc(r.data.route)}</span>
+        <span class="muted" style="font-size:.82rem">may be approved by ${esc(r.data.approvers.join(" or "))}</span>
+        ${fin ? `<span class="chip ${fin.kind === "approval.granted" ? "v-legitimate" : "v-fraud"}">${fin.kind === "approval.granted" ? "approved" : "rejected"}</span>` : '<span class="chip v-uncertain">pending</span>'}</div>
+        <div class="trail">${nodes.join("")}</div></div>`;
+    }).join("")}</div>`;
+  }
+
+  function evidenceHTML(inv) {
+    const a = inv.answer; if (!a) return '<p class="muted">No answer file: the investigation failed closed.</p>';
+    const c = a.case; const model = (inv.entries || []).find((e) => e.kind === "step.model");
+    const probs = model?.data?.probabilities;
+    return `<div class="facts">
+        <div class="fact"><dt>Pattern</dt><dd>${esc(c.pattern)}</dd></div>
+        <div class="fact"><dt>Affected transactions</dt><dd class="mono">${esc(c.affected_txn_ids.join(", ") || "none")}</dd></div>
+        <div class="fact"><dt>First suspicious</dt><dd class="mono">${esc(c.first_suspicious_txn_id || "—")}</dd></div>
+        <div class="fact"><dt>Connected cards</dt><dd>${c.connected_card_ids.length}</dd></div>
+        <div class="fact"><dt>Device profiles</dt><dd class="mono">${esc(c.connected_device_profiles.join(", ") || "none")}</dd></div>
+        <div class="fact"><dt>Precedent cited</dt><dd class="mono">${esc(c.similar_prior_cases.join(", ") || "none")}</dd></div></div>
+      ${probs ? `<div><h3 style="margin-bottom:8px">Decision model scores</h3><div class="bars">${Object.entries(probs).map(([k, v]) =>
+        `<div class="bar"><span class="mono">${esc(k)}</span><span class="track"><span class="fill ${k === "is_fraud" ? (v >= .8 ? "hi" : v <= .2 ? "lo" : "") : ""}" style="width:${(v * 100).toFixed(1)}%"></span></span><span class="mono">${pct(v)}</span></div>`).join("")}</div>
+        <p class="note">The model returns these five probabilities only. The verdict is made by code from them, under the gates recorded with the decision.</p></div>` : ""}
+      <div><h3 style="margin-bottom:8px">Evidence claims</h3><div class="tablewrap"><table><thead><tr><th>Claim</th><th>Source</th><th>How to re-run it</th></tr></thead><tbody>
+        ${c.evidence.map((v) => `<tr><td>${esc(v.claim)}</td><td>${esc(v.source)}</td><td class="mono">${esc(v.ref)}</td></tr>`).join("")}</tbody></table></div></div>
+      <div><h3 style="margin-bottom:8px">Suspicious activity report</h3><p class="note">${a.sar.file ? esc(a.sar.narrative) : esc(a.sar.reason)}</p></div>
+      ${inv.containment ? `<div><h3 style="margin-bottom:8px">Containment plan</h3><div class="tablewrap"><table><thead><tr><th>Card</th><th>Action</th><th>Ring exposure</th><th>Own spend 45d</th><th>Customer impact</th></tr></thead><tbody>
+        ${inv.containment.cards.slice().sort((x, y) => y.ring_exposure - x.ring_exposure).map((r) => `<tr><td class="mono">${esc(r.card_id)}</td><td>${esc(r.action)}</td><td>${money(r.ring_exposure)}</td><td>${money(r.own_spend_45d)}</td><td>${esc(r.touches_customer)}</td></tr>`).join("")}</tbody></table></div></div>` : ""}`;
+  }
+
+  function walkHTML(inv) {
+    const e = inv.entries || [];
+    const pick = (kinds) => e.filter((x) => kinds.includes(x.kind));
+    const qs = pick(["step.query"]);
+    const leads = [
+      () => { const o = pick(["case.opened"])[0]?.data; return o ? `<p class="lead">On ${when(o.as_of)} a <b>${esc(o.alert.trigger_type)}</b> alert arrived for card <span class="mono">${esc(o.alert.card_id)}</span>, flagging transaction <span class="mono">${esc(o.alert.flagged_txn_id)}</span>.</p>
+        ${o.alert.trigger_text ? `<p class="q">${esc(o.alert.trigger_text)}</p><p class="note">Alert text is recorded as data. It never reaches a rule, and the decision model receives it quoted as untrusted.</p>` : ""}` : ""; },
+      () => `<p class="lead">The agent ran <b>${qs.length}</b> graph queries. Each one is listed with its exact parameters and a digest of the rows that came back, so any step can be re-run and compared.</p>`,
+      () => `<p class="lead">This is what the detectors and the card's own history showed, and what the decision model scored.</p>`,
+      () => { const d = pick(["decision"])[0]?.data; return d ? `<p class="lead">Verdict <b>${esc(d.verdict)}</b> at ${pct(d.fraud_probability)}, reached by <span class="mono">${esc(d.decided_by)}</span>.</p><p class="note">${esc((d.reasons || []).join(" "))}</p>` : '<p class="lead">No decision was reached; the investigation failed closed.</p>'; },
+      () => `<p class="lead">Actions on the L1 and L2 routes waited for a person. Here is every approval request, every attempt, and who decided.</p>`,
+      () => { const own = e.filter((x) => chainState && chainState.ok[x.seq]).length;
+        return `<p class="lead">${chainState ? (chainState.broken ? `The chain is <b style="color:var(--bad)">broken</b> at entry #${chainState.broken.seq}.` : `All <b>${own}</b> entries of this investigation are inside a chain recomputed in this browser.`) : "Choose “Re-verify chain in this browser” at the top to recompute every hash."}</p>`; },
+    ];
+    const body = stepIx === 4 ? approvalChainHTML(e) : entriesHTML(pick(STEP_KINDS[stepIx]));
+    return `<div class="steps" role="list">${STEPS.map(([t, s], i) => `<button class="step" type="button" role="listitem" data-step="${i}" aria-current="${i === stepIx}"><span class="n">Step ${i + 1}</span><b>${t}</b><span class="muted">${s}</span></button>`).join("")}</div>
+      ${leads[stepIx]()}${body}
+      <div class="nav"><button class="btn" type="button" data-move="-1" ${stepIx === 0 ? "disabled" : ""}>Previous step</button><button class="btn primary" type="button" data-move="1" ${stepIx === 5 ? "disabled" : ""}>Next step</button></div>`;
+  }
+
+  function renderDossier() {
+    const inv = cache[current]; if (!inv) return;
+    const r = summary.investigations.find((x) => x.case_id === current) || {};
+    const c = inv.answer?.case;
+    const tabs = [["walk", "Examiner walkthrough"], ["timeline", "Full timeline"], ["approvals", "Approval chain"], ["evidence", "Evidence & outcome"]];
+    const body = tab === "walk" ? walkHTML(inv) : tab === "timeline" ? entriesHTML(inv.entries) : tab === "approvals" ? approvalChainHTML(inv.entries) : evidenceHTML(inv);
+    $("#dossier").innerHTML = `
+      <div class="dhead"><div class="row"><span class="eyebrow">Investigation file</span><h2 class="mono" style="font-family:var(--f-mono)">${esc(current)}</h2>${verdictChip(r)}<span class="muted">${esc(r.status || "")}</span></div>
+        <dl class="facts" style="margin:0">
+          <div class="fact"><dt>Opened</dt><dd>${when(r.opened_at)}</dd></div>
+          <div class="fact"><dt>Fraud probability</dt><dd>${pct(c?.fraud_probability)}</dd></div>
+          <div class="fact"><dt>Exposure</dt><dd>${money(c?.exposure_usd)}</dd></div>
+          <div class="fact"><dt>Report</dt><dd>${inv.answer ? (inv.answer.sar.file ? "Filed" : "Not required") : "—"}</dd></div>
+          <div class="fact"><dt>Graph record</dt><dd>${c?.written_to_graph ? `<span class="mono">${esc(c.graph_case_id)}</span>` : "Not written"}</dd></div>
+          <div class="fact"><dt>Audit entries</dt><dd>${inv.entries.length}</dd></div></dl></div>
+      <div class="tabs" role="tablist">${tabs.map(([k, t]) => `<button class="tab" role="tab" type="button" data-tab="${k}" aria-selected="${tab === k}">${t}</button>`).join("")}</div>
+      <div class="tabbody">${body}</div>`;
+  }
+
+  async function open(id) {
+    current = id; stepIx = 0;
+    try { location.hash = id.replace(/[^A-Za-z0-9-]/g, ""); } catch (_) {}
+    renderList();
+    if (!cache[id]) { $("#dossier").innerHTML = '<div class="empty">Opening the file…</div>'; cache[id] = await api(`/v2/investigations/${encodeURIComponent(id)}`); }
+    renderDossier();
+  }
+
+  async function renderChanges() {
+    const ch = await api("/v2/changes");
+    const drift = ch.schema_drift || {};
+    const findings = drift.report?.findings || [];
+    const appr = drift.approval;
+    const status = ch.status_changes || [];
+    const cfg = ch.configurations || [];
+    const versions = [...new Set(cfg.map((c) => c.code_version))];
+    $("#changes").innerHTML = `
+      <div><h3 style="margin-bottom:6px">Data change: January 2017 files</h3>
+        ${drift.report ? `<p class="note">Drift report <span class="mono">${esc(drift.report.report_hash?.slice(0, 16))}</span> checked ${when(drift.report.checked_at)} · ${drift.report.transactions?.rows?.toLocaleString?.() ?? ""} transactions.
+          ${appr ? `Approved by <b>${esc(appr.approved_by)}</b> (${esc(appr.role)}) at ${when(appr.approved_at)}, receipt <span class="mono">${esc(appr.receipt?.slice(0, 16))}</span>.` : '<b style="color:var(--warn)">Not yet approved: the pipeline will refuse to stage this data.</b>'}</p>
+        <div class="tablewrap"><table><thead><tr><th>Severity</th><th>Where</th><th>Field</th><th>What changed</th></tr></thead><tbody>
+          ${findings.map((f) => `<tr><td class="sev-${esc(f.severity)}">${esc(f.severity)}</td><td>${esc(f.where)}</td><td class="mono">${esc(f.column)}</td><td>${esc(f.change)}</td></tr>`).join("")}</tbody></table></div>` : '<p class="muted">No drift report on file.</p>'}</div>
+      <div><h3 style="margin-bottom:6px">Configuration in force</h3>
+        <p class="note">${cfg.length} investigation(s) ran on code version${versions.length > 1 ? "s" : ""} <span class="mono">${esc(versions.join(", ") || "—")}</span>. Rules and thresholds are recorded on every case.</p>
+        ${cfg[0] ? `<pre>${esc(JSON.stringify({ rules: cfg[0].rules, thresholds: cfg[0].thresholds, model_enabled: cfg[0].model_enabled }, null, 1))}</pre>` : ""}</div>
+      <div><h3 style="margin-bottom:6px">Status changes</h3><div class="tablewrap"><table><thead><tr><th>Entry</th><th>When</th><th>Case</th><th>Change</th><th>By</th></tr></thead><tbody>
+        ${status.map((e) => `<tr><td class="mono">#${e.seq}</td><td>${when(e.at)}</td><td class="mono"><a href="#${esc(e.case_id)}" data-open="${esc(e.case_id)}">${esc(e.case_id)}</a></td><td>${KIND_TEXT["status.changed"](e.data)}</td><td>${esc(e.actor)} (${esc(e.role)})</td></tr>`).join("")}</tbody></table></div></div>`;
+  }
+
+  async function load() {
+    try {
+      summary = await api("/v2/summary");
+      $("#sourceLine").textContent = SNAP
+        ? `Snapshot exported ${when(SNAP.exported_at)} from ${SNAP.summary.run_dir} · read-only copy`
+        : `Live record · ${summary.run_dir} · viewing as ${summary.viewer.actor_id} (${summary.viewer.actor_role})${summary.viewer.authenticated ? "" : " · demo mode, not authenticated"}`;
+      renderStrip(); renderList(); await renderChanges();
+      const want = decodeURIComponent((location.hash || "").slice(1));
+      const first = summary.investigations.find((r) => r.case_id === want) || summary.investigations.find((r) => r.pending.length || r.denied_attempts) || summary.investigations[0];
+      if (first) await open(first.case_id);
+      verifyChain();
+    } catch (err) { $("#sourceLine").textContent = err.message; }
+  }
+
+  document.addEventListener("click", (ev) => {
+    const t = ev.target.closest("[data-id],[data-tab],[data-step],[data-move],[data-open]"); if (!t) return;
+    if (t.dataset.id) open(t.dataset.id);
+    else if (t.dataset.open) { ev.preventDefault(); open(t.dataset.open); }
+    else if (t.dataset.tab) { tab = t.dataset.tab; renderDossier(); }
+    else if (t.dataset.step) { stepIx = +t.dataset.step; renderDossier(); }
+    else if (t.dataset.move) { stepIx = Math.max(0, Math.min(5, stepIx + +t.dataset.move)); renderDossier(); }
+  });
+  $("#filter").addEventListener("input", renderList);
+  $("#verifyBtn").addEventListener("click", verifyChain);
+  $("#tokGo").addEventListener("click", () => { token = $("#tok").value.trim(); cache = {}; load(); });
+  window.addEventListener("hashchange", () => { const id = decodeURIComponent(location.hash.slice(1)); if (summary && id && id !== current && summary.investigations.some((r) => r.case_id === id)) open(id); });
+  load();
+})();
+</script>

@@ -44,6 +44,11 @@ INJECTION_PATTERNS = [
     r"\bverdict\s*[:=]",
     r"\bfraud_probability\b|\bnext_best_action\b|\bjson\b",
     r"\bauthori[sz]ed by\b|\bapproved by\b.{0,30}\b(L1|L2|manager|supervisor)\b",
+    r"\b(AI|model|assistant|agent|LLM|automated (system|reviewer))\b.{0,40}\b(must|should|will|is to|needs to)\b",
+    r"\bpre-?approved\b|\balready (approved|cleared|verified)\b",
+    r"\b(no need|don'?t|do not) (to )?(verify|investigate|check|contact)\b",
+    r"\b(block|freeze|cancel) (the |this |all )?(card|cards|account) (now|immediately|right away)\b",
+    r"</?(system|instructions?|admin)>|\[(system|admin|override)\]",
 ]
 
 SYSTEM = """You are a senior card-fraud analyst at a bank. You decide whether one case is fraud.
@@ -87,11 +92,35 @@ SCHEMA: dict[str, Any] = {
 }
 
 
+_ZERO_WIDTH = dict.fromkeys(map(ord, "​‌‍⁠﻿­"), None)
+
+
+def normalise(text: str) -> str:
+    """Undo the cheap obfuscations: look-alike Unicode (NFKC), zero-width and soft
+    hyphen characters, and any base64 run that decodes to readable text, which is
+    appended so an instruction hidden that way is scanned too."""
+    import base64
+    import binascii
+    import unicodedata
+
+    t = unicodedata.normalize("NFKC", text or "").translate(_ZERO_WIDTH)
+    extra = []
+    for run in re.findall(r"[A-Za-z0-9+/=]{24,}", t):
+        try:
+            dec = base64.b64decode(run + "=" * (-len(run) % 4), validate=True).decode("utf8")
+        except (binascii.Error, UnicodeDecodeError, ValueError):
+            continue
+        if dec and sum(ch.isprintable() for ch in dec) >= 0.9 * len(dec):
+            extra.append(dec)
+    return " ".join([t, *extra])
+
+
 def scan_injection(text: str) -> list[str]:
-    """The instruction-shaped spans in a piece of free text."""
+    """The instruction-shaped spans in a piece of free text, after normalisation."""
+    t = normalise(text)
     hits = []
     for p in INJECTION_PATTERNS:
-        for m in re.finditer(p, text or "", flags=re.IGNORECASE):
+        for m in re.finditer(p, t, flags=re.IGNORECASE):
             hits.append(m.group(0))
     return hits
 
@@ -247,21 +276,26 @@ def verdict_from(p: dict[str, float]) -> tuple[str, float]:
     return "uncertain", min(max(f, 0.3), 0.69)
 
 
-def adjudicate_decisions(bundle: dict, *, post=None, model: str | None = None) -> Adjudication:
-    """Score the five predicates. Never raises; failure is ``uncertain`` with ``rejected`` set."""
+def adjudicate_decisions(bundle: dict, *, post=None, model: str | None = None,
+                         defended: bool = True) -> Adjudication:
+    """Score the five predicates. Never raises; failure is ``uncertain`` with ``rejected`` set.
+
+    ``defended=False`` exists only for ``eval/attacks.py``: it pastes the trigger
+    text into the prompt as plain context, the way an undefended agent would, so
+    the defence is measured against something rather than asserted."""
     model = model or os.getenv("OPENAI_DECISION_MODEL") or DEFAULT_DECISION_MODEL
     text = bundle.get("trigger_text", "")
-    flagged = scan_injection(text)
+    flagged = scan_injection(text) if defended else []
     payload = {k: v for k, v in bundle.items() if not k.startswith("_")}
-    payload["trigger_text"] = {"untrusted_text": text, "instruction_like_spans_detected": flagged}
-    body = {
-        "model": model,
-        "input": [{"role": "user", "content": [
-            {"type": "input_text", "text": SYSTEM.split("Reply with JSON only")[0].strip()},
-            {"type": "input_text", "text": "EVIDENCE BUNDLE (JSON):\n" + json.dumps(payload, default=str)},
-        ]}],
-        "questions": PREDICATES,
-    }
+    if defended:
+        payload["trigger_text"] = {"untrusted_text": text, "instruction_like_spans_detected": flagged}
+        content = [{"type": "input_text", "text": SYSTEM.split("Reply with JSON only")[0].strip()},
+                   {"type": "input_text", "text": "EVIDENCE BUNDLE (JSON):\n" + json.dumps(payload, default=str)}]
+    else:
+        payload.pop("trigger_text", None)
+        content = [{"type": "input_text", "text": "You are a fraud analyst. Case note from the bank: " + text},
+                   {"type": "input_text", "text": json.dumps(payload, default=str)}]
+    body = {"model": model, "input": [{"role": "user", "content": content}], "questions": PREDICATES}
     t0 = time.perf_counter()
     try:
         if post is None:
@@ -296,11 +330,16 @@ def adjudicate_decisions(bundle: dict, *, post=None, model: str | None = None) -
     return a
 
 
+#: Always True in production. eval/attacks.py switches it off to measure what the
+#: quarantine and the scanner are worth against an undefended prompt.
+DEFENCES_ON = True
+
+
 def adjudicate_any(bundle: dict, **kw) -> Adjudication:
     """Route to the configured backend: ``decisions`` (default) or ``chat``."""
     if os.getenv("OPENAI_DECISION_API", "decisions") == "chat":
         return adjudicate(bundle, **kw)
-    return adjudicate_decisions(bundle, post=kw.get("post"), model=kw.get("model"))
+    return adjudicate_decisions(bundle, post=kw.get("post"), model=kw.get("model"), defended=DEFENCES_ON)
 
 
 def to_dict(a: Adjudication) -> dict:

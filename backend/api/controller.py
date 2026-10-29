@@ -30,6 +30,7 @@ from fastapi import APIRouter, Request
 from starlette.responses import Response
 
 from api.errors import ApiError
+from api import auth
 from api.principal import IDEMPOTENCY_HEADER, ROLE_HEADER, Principal, parse_role
 from api.schemas import Problem
 
@@ -130,9 +131,11 @@ class ApiController(RouterController):
         nothing: the role decides only who may *approve*, and every route is
         recomputed server-side on both the read and the execute (ADR-6).
         """
-        header = request.headers.get(ROLE_HEADER)
-        query = request.query_params.get("role")
-        return Principal(role=parse_role(header or query, self.container.settings.default_role))
+        try:
+            return auth.resolve_principal(request.headers, request.query_params,
+                                          self.container.settings.default_role if not auth.secret() else "")
+        except auth.AuthError as exc:
+            raise ApiError(f"invalid or missing token: {exc}", code="unauthenticated", status=401) from exc
 
     @staticmethod
     def request_id(request: Request) -> str:

@@ -1,0 +1,384 @@
+{
+ "problems": {
+  "no_identity_record": {
+   "what": "transactions with no identity record",
+   "why_it_matters": "device, proxy and identity-match signals are unobservable, not absent; a rule reading NULL as 'no new device' would clear new-device fraud",
+   "n": 494624,
+   "share": 0.7599,
+   "sample_txn_ids": [
+    3000002,
+    3000005,
+    3000006,
+    3000007,
+    3000009,
+    3000010,
+    3000011,
+    3000012,
+    3000014,
+    3000015
+   ],
+   "by_month": {
+    "2016-07": 74988,
+    "2016-08": 76532,
+    "2016-09": 75752,
+    "2016-10": 82109,
+    "2016-11": 70136,
+    "2016-12": 70441,
+    "2017-01": 44666
+   }
+  },
+  "online_no_identity": {
+   "what": "online transactions with no identity record",
+   "why_it_matters": "an online purchase with no device record cannot be tested for card-not-present new-device fraud at all",
+   "n": 11654,
+   "share": 0.0179,
+   "sample_txn_ids": [
+    3000014,
+    3000015,
+    3000020,
+    3000041,
+    3000114,
+    3000202,
+    3000443,
+    3000691,
+    3000889,
+    3001004
+   ],
+   "by_month": {
+    "2016-07": 3646,
+    "2016-08": 1480,
+    "2016-09": 1509,
+    "2016-10": 1536,
+    "2016-11": 1006,
+    "2016-12": 1111,
+    "2017-01": 1366
+   }
+  },
+  "no_billing_region": {
+   "what": "transactions with an empty billing region",
+   "why_it_matters": "out-of-region use and travel cannot be tested; a region rule must skip, not fire",
+   "n": 70713,
+   "share": 0.1086,
+   "sample_txn_ids": [
+    3000001,
+    3000003,
+    3000004,
+    3000008,
+    3000015,
+    3000016,
+    3000018,
+    3000020,
+    3000041,
+    3000044
+   ],
+   "by_month": {
+    "2016-07": 13229,
+    "2016-08": 10800,
+    "2016-09": 11225,
+    "2016-10": 12595,
+    "2016-11": 8507,
+    "2016-12": 9383,
+    "2017-01": 4974
+   }
+  },
+  "dist_placeholder": {
+   "what": "dist1 holds the -1 'missing' sentinel",
+   "why_it_matters": "distance features are placeholders, not zero distance",
+   "n": 390530,
+   "share": 0.5999,
+   "sample_txn_ids": [
+    3000001,
+    3000002,
+    3000003,
+    3000004,
+    3000005,
+    3000006,
+    3000007,
+    3000008,
+    3000009,
+    3000013
+   ],
+   "by_month": {
+    "2016-07": 91644,
+    "2016-08": 55154,
+    "2016-09": 49676,
+    "2016-10": 61444,
+    "2016-11": 45645,
+    "2016-12": 48910,
+    "2017-01": 38057
+   }
+  },
+  "risk_missing": {
+   "what": "risk_score missing (-1 sentinel)",
+   "why_it_matters": "a missing score is not a low score",
+   "n": 0,
+   "share": 0.0,
+   "sample_txn_ids": [],
+   "by_month": {
+    "2016-07": 0,
+    "2016-08": 0,
+    "2016-09": 0,
+    "2016-10": 0,
+    "2016-11": 0,
+    "2016-12": 0,
+    "2017-01": 0
+   }
+  },
+  "device_label_missing": {
+   "what": "January device profiles with no usable label",
+   "n": 0,
+   "of": 9728,
+   "why_it_matters": "connected_device_profiles must quote a label"
+  },
+  "thin_cards": {
+   "what": "cards with fewer than 10 transactions in the whole dataset",
+   "n": 9992,
+   "sample_card_ids": [
+    "C00001-K1",
+    "C00002-K1",
+    "C00003-K1",
+    "C00004-K1",
+    "C00005-K1",
+    "C00006-K1",
+    "C00007-K1",
+    "C00008-K1",
+    "C00009-K1",
+    "C00010-K1"
+   ],
+   "why_it_matters": "no stable baseline: amount, region and product comparisons are not meaningful"
+  },
+  "new_in_january": {
+   "what": "cards first seen in January 2017",
+   "n": 0,
+   "sample_card_ids": null,
+   "why_it_matters": "the bank's model was not retrained and these cards have no pre-January baseline"
+  }
+ },
+ "investigations": [
+  {
+   "case_id": "HHG-001",
+   "flagged_txn_id": "3514030",
+   "card_id": "C12382-K1",
+   "verdict": "legitimate",
+   "prior_txns": 358,
+   "issues": [
+    "flagged transaction has no identity record: device and proxy signals unobservable"
+   ],
+   "tainted": true,
+   "note": "the conclusion rests on evidence the data cannot show; treat as lower confidence"
+  },
+  {
+   "case_id": "HHG-002",
+   "flagged_txn_id": "3478782",
+   "card_id": "C11891-K1",
+   "verdict": "legitimate",
+   "prior_txns": 35,
+   "issues": [
+    "flagged transaction has no identity record: device and proxy signals unobservable on an ONLINE purchase",
+    "flagged transaction has no billing region: region novelty untestable"
+   ],
+   "tainted": true,
+   "note": "the conclusion rests on evidence the data cannot show; treat as lower confidence"
+  },
+  {
+   "case_id": "HHG-003",
+   "flagged_txn_id": "3530164",
+   "card_id": "C08623-K2",
+   "verdict": "fraud",
+   "prior_txns": 980,
+   "issues": [
+    "flagged transaction has no identity record: device and proxy signals unobservable"
+   ],
+   "tainted": false,
+   "note": ""
+  },
+  {
+   "case_id": "HHG-004",
+   "flagged_txn_id": "3583227",
+   "card_id": "C08106-K1",
+   "verdict": "legitimate",
+   "prior_txns": 209,
+   "issues": [
+    "flagged transaction has no billing region: region novelty untestable"
+   ],
+   "tainted": true,
+   "note": "the conclusion rests on evidence the data cannot show; treat as lower confidence"
+  },
+  {
+   "case_id": "HHG-005",
+   "flagged_txn_id": "3523199",
+   "card_id": "C02923-K1",
+   "verdict": "legitimate",
+   "prior_txns": 90,
+   "issues": [],
+   "tainted": false,
+   "note": ""
+  },
+  {
+   "case_id": "HHG-006",
+   "flagged_txn_id": "3476682",
+   "card_id": "C07297-K1",
+   "verdict": "fraud",
+   "prior_txns": 199,
+   "issues": [],
+   "tainted": false,
+   "note": ""
+  },
+  {
+   "case_id": "HHG-007",
+   "flagged_txn_id": "3514948",
+   "card_id": "C09933-K2",
+   "verdict": "legitimate",
+   "prior_txns": 2431,
+   "issues": [
+    "flagged transaction has no identity record: device and proxy signals unobservable"
+   ],
+   "tainted": true,
+   "note": "the conclusion rests on evidence the data cannot show; treat as lower confidence"
+  },
+  {
+   "case_id": "HHG-008",
+   "flagged_txn_id": "3558054",
+   "card_id": "C13171-K2",
+   "verdict": "fraud",
+   "prior_txns": 899,
+   "issues": [
+    "flagged transaction has no billing region: region novelty untestable"
+   ],
+   "tainted": false,
+   "note": ""
+  },
+  {
+   "case_id": "HHG-009",
+   "flagged_txn_id": "3581141",
+   "card_id": "C08299-K1",
+   "verdict": "fraud",
+   "prior_txns": 46,
+   "issues": [
+    "flagged transaction has no identity record: device and proxy signals unobservable on an ONLINE purchase"
+   ],
+   "tainted": false,
+   "note": ""
+  },
+  {
+   "case_id": "HHG-010",
+   "flagged_txn_id": "3506725",
+   "card_id": "C10434-K1",
+   "verdict": "legitimate",
+   "prior_txns": 33,
+   "issues": [],
+   "tainted": false,
+   "note": ""
+  },
+  {
+   "case_id": "HHG-011",
+   "flagged_txn_id": "3583368",
+   "card_id": "C11923-K2",
+   "verdict": "fraud",
+   "prior_txns": 10306,
+   "issues": [
+    "flagged transaction has no billing region: region novelty untestable"
+   ],
+   "tainted": false,
+   "note": ""
+  },
+  {
+   "case_id": "HHG-012",
+   "flagged_txn_id": "3553342",
+   "card_id": "C05876-K2",
+   "verdict": "legitimate",
+   "prior_txns": 910,
+   "issues": [
+    "flagged transaction has no identity record: device and proxy signals unobservable"
+   ],
+   "tainted": true,
+   "note": "the conclusion rests on evidence the data cannot show; treat as lower confidence"
+  },
+  {
+   "case_id": "HHG-013",
+   "flagged_txn_id": "3526826",
+   "card_id": "C07671-K2",
+   "verdict": "legitimate",
+   "prior_txns": 1431,
+   "issues": [
+    "flagged transaction has no billing region: region novelty untestable"
+   ],
+   "tainted": true,
+   "note": "the conclusion rests on evidence the data cannot show; treat as lower confidence"
+  },
+  {
+   "case_id": "HHG-014",
+   "flagged_txn_id": "3478561",
+   "card_id": "C13487-K1",
+   "verdict": "fraud",
+   "prior_txns": 71,
+   "issues": [],
+   "tainted": false,
+   "note": ""
+  },
+  {
+   "case_id": "HHG-015",
+   "flagged_txn_id": "3464869",
+   "card_id": "C03042-K1",
+   "verdict": "uncertain",
+   "prior_txns": 68,
+   "issues": [],
+   "tainted": false,
+   "note": ""
+  },
+  {
+   "case_id": "HHG-016",
+   "flagged_txn_id": "3534820",
+   "card_id": "C09988-K1",
+   "verdict": "fraud",
+   "prior_txns": 48,
+   "issues": [
+    "flagged transaction has no billing region: region novelty untestable"
+   ],
+   "tainted": false,
+   "note": ""
+  },
+  {
+   "case_id": "HHG-017",
+   "flagged_txn_id": "3450629",
+   "card_id": "C04570-K1",
+   "verdict": "legitimate",
+   "prior_txns": 52,
+   "issues": [],
+   "tainted": false,
+   "note": ""
+  },
+  {
+   "case_id": "HHG-018",
+   "flagged_txn_id": "3491361",
+   "card_id": "C02354-K2",
+   "verdict": "fraud",
+   "prior_txns": 5860,
+   "issues": [
+    "flagged transaction has no identity record: device and proxy signals unobservable"
+   ],
+   "tainted": false,
+   "note": ""
+  },
+  {
+   "case_id": "HHG-019",
+   "flagged_txn_id": "3503878",
+   "card_id": "C07987-K2",
+   "verdict": "uncertain",
+   "prior_txns": 219,
+   "issues": [],
+   "tainted": false,
+   "note": ""
+  },
+  {
+   "case_id": "HHG-020",
+   "flagged_txn_id": "3509359",
+   "card_id": "C12265-K2",
+   "verdict": "legitimate",
+   "prior_txns": 82,
+   "issues": [],
+   "tainted": false,
+   "note": ""
+  }
+ ]
+}

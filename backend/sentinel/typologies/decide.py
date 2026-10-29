@@ -58,6 +58,7 @@ class Decision:
     hits: list[TypologyHit]
     decided_by: str  # "typology" | "rule_R2" | "explained" | "model" | "model_failed_closed"
     injection_spans: list[str] = field(default_factory=list)
+    precedent: list[dict] = field(default_factory=list)
     adjudication: Adjudication | None = None
 
 
@@ -159,11 +160,14 @@ def decide(
     unexplained = [a for a in anoms if not set(a.explained_by) & ex_keys]
     spans = scan_injection(trigger_text)
 
+    found: dict = {"precedent": []}  # filled once retrieval has run; early returns carry none
+
     def out(verdict, p, pattern, desc, affected, decided_by, reasons, hit=None, adj=None) -> Decision:
         return Decision(
             verdict, round(p, 4), pattern, desc, sorted(set(affected), key=lambda i: by_id[i].ts if i in by_id else f.ts),
             list(hit.connected_card_ids) if hit else [], hit.shared if hit else "", reasons,
-            [f"{a.key}: {a.detail}" for a in unexplained], [e.reason for e in exps], hits, decided_by, spans, adj,
+            [f"{a.key}: {a.detail}" for a in unexplained], [e.reason for e in exps], hits, decided_by,
+            injection_spans=spans, adjudication=adj, precedent=found["precedent"],
         )
 
     # 1. A decisive typology anchored on this case.
@@ -190,6 +194,19 @@ def decide(
         recipients = sorted({t.r_email for t in window if t.r_email}
                             - {"gmail.com", "yahoo.com", "hotmail.com", "anonymous.com", "outlook.com", "aol.com"})
         precedent = src.linked_closed_cases(card_id, devices, recipients, as_of)
+    # GraphRAG: closed cases whose notes read like this one (vector search over
+    # ClosedCase.emb on the graph), fused with the graph-linked ones by rank.
+    vector_hits, vector_error = [], ""
+    if getattr(src, "vector", None) is not None:
+        from sentinel.typologies.vector import describe, fuse
+
+        try:
+            vector_hits = src.vector.search(describe(f, [f"{a.key}: {a.detail}" for a in unexplained],
+                                                     [e.reason for e in exps], hits), as_of)
+        except Exception as exc:  # noqa: BLE001 — supporting evidence; recorded, never pretended
+            vector_error = f"vector precedent unavailable: {type(exc).__name__}: {str(exc)[:160]}"
+        precedent = fuse(precedent, vector_hits)
+    found["precedent"] = precedent
     lookalikes = src.cleared_lookalikes([a.key for a in anoms], as_of) if hasattr(src, "cleared_lookalikes") else []
     context = src.history_context() if hasattr(src, "history_context") else {}
     episode_ids = _episode(f, hist, after)
@@ -203,7 +220,8 @@ def decide(
         "history_explains": [e.reason for e in exps],
         "typology_hits": [{"key": h.key, "description": h.description, "strength": h.strength} for h in hits],
         "prior_closed_cases_on_card": prior_cases or [],
-        "precedent_cases_linked_by_entity": precedent,
+        "precedent_cases": precedent,
+        "vector_precedent_status": vector_error or ("ok" if vector_hits else "not available on this source"),
         "cleared_lookalike_precedents": lookalikes,
         "bank_history_context": context,
         "_citable_txn_ids": [f.txn_id, *(t.txn_id for t in hist[-15:]), *(t.txn_id for t in after[:20])],

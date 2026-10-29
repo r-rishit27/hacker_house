@@ -164,7 +164,9 @@ def build_answer(
             "connected_device_profiles": [d.shared] if d.verdict == "fraud" and d.shared.startswith("D") and len(d.shared) == 13 else [],
             "exposure_usd": exposure,
             "evidence": evidence,
-            "similar_prior_cases": [p["case_id"] for p in prior_cases][-6:],
+            # GraphRAG-fused precedent when it ran (graph link + vector), else the card's own history.
+            "similar_prior_cases": ([p["case_id"] for p in d.precedent if str(p["case_id"]).startswith("CC-")][:6]
+                                    or [p["case_id"] for p in prior_cases if str(p["case_id"]).startswith("CC-")][-6:]),
             "summary": summary[:1200],
             "written_to_graph": False, "graph_case_id": "",
         },

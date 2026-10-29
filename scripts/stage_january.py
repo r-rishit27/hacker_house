@@ -146,10 +146,20 @@ def write_staging(con: duckdb.DuckDBPyConnection, raw_cc: Path, out: Path) -> No
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dataset-dir", default=str(cfg.ROOT / "data" / "round2"))
+    ap.add_argument("--skip-drift-approval", action="store_true",
+                    help="stage without a schema-drift approval (local experiments only; the run says so)")
     ap.add_argument("--staging-out", default=str(cfg.ROOT / "data" / "staging_r2"),
                     help="where to write the Jul-Jan loader files (point STAGING_DIR here to load them)")
     args = ap.parse_args()
     d = Path(args.dataset_dir)
+    # Challenge 12: nothing is staged from changed data until a human with the
+    # right role has approved the exact drift report (scripts/schema_drift.py).
+    from scripts.schema_drift import approved
+
+    ok, why = approved()
+    print(f"schema drift: {why}")
+    if not ok and not args.skip_drift_approval:
+        raise SystemExit("refusing to stage unapproved data (use --skip-drift-approval for a local experiment)")
     raw_txn, raw_id = find(d, "transactions_2017q1"), find(d, "identity_2017q1")
     raw_cc = find(d, "closed_cases_history")
 

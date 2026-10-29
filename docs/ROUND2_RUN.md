@@ -18,7 +18,9 @@ cp .env.example .env
 
 # Stage July 2016 - January 2017 (data/round2 holds the January files and the
 # replacement closed_cases_history; data/staging holds July - December).
-.venv/bin/python scripts/stage_january.py           # -> data/lab.duckdb, data/staging_r2/   (~1 min)
+.venv/bin/python scripts/schema_drift.py check      # what changed in the January files and the closed-case history
+.venv/bin/python scripts/schema_drift.py approve --token <team lead or fraud manager token>
+.venv/bin/python scripts/stage_january.py           # refuses unapproved data; -> data/lab.duckdb, data/staging_r2/ (~1 min)
 ```
 
 Only if the graph has to be (re)built — `GRAPH_GOA` is already loaded on the
@@ -36,6 +38,13 @@ against the staging files; it prints `ALL CHECKS PASSED`.
 The Savanna workspace auto-stops when idle. The first request after that returns a
 "Starting workspace" page for ~20 s; send one request a minute before a run.
 
+Signed identities (needed for approvals and the enforced API): set
+`SENTINEL_AUTH_SECRET` in `.env`, then issue one per person:
+`cd backend && python -m api.auth mint --user priya --role team_lead --hours 12`.
+
+Before a drill or the demo: `python scripts/warmup.py` (waits for the workspace,
+checks counts and one query, prints READY).
+
 ## 2. One case (the drill command)
 
 ```bash
@@ -52,6 +61,27 @@ unreachable and nothing was written.
 | `--source graph` (default) | read TigerGraph `GRAPH_GOA` |
 | `--source lab` | read the local DuckDB mirror; every evidence ref then says so |
 | `--no-model` | deterministic layer only; cases it cannot settle become `uncertain` + escalation |
+
+Each run also writes `audit/ledger.jsonl` (hash-chained trail of every step) and,
+for coordinated fraud, `containment/<case>.json` (which cards to block, which to
+monitor, whom each action touches). The case is written to the graph as
+`FraudCase` and marked `written_to_graph` only after a matching read-back.
+
+Approvals (L1/L2 actions wait for a person):
+
+```bash
+cd backend
+python -m sentinel.typologies.approvals --ledger ../audit/ledger.jsonl pending --case HHF-007
+python -m sentinel.typologies.approvals --ledger ../audit/ledger.jsonl decide --case HHF-007 --action BLOCK_CARD --token <sv1...>
+```
+
+## The service and the regulator's view
+
+```bash
+cd backend && SENTINEL_RUN_DIR=../out uvicorn api_v2.app:app --port 8100
+# http://127.0.0.1:8100/regulator — investigations, examiner walkthrough, approval chain, change record
+python scripts/export_regulator_snapshot.py --run out --out regulator_snapshot.html   # read-only copy, no server
+```
 
 ## 3. The whole pack
 
@@ -74,7 +104,10 @@ python -m eval.overfit_check [--model]       # held-out cleared alerts, held-out
 python -m eval.episode_check                 # episode scoping vs 300 labelled episodes
 python -m eval.graph_parity                  # graph vs mirror: identical decisions on all 20
 python -m eval.backtest_typologies           # each detector on closed cases, controls, January
-cd backend && python -m pytest tests/unit/test_adjudicator.py tests/unit/test_decisions_backend.py -q
+python -m eval.attacks [--no-model]          # 12 prompt-injection attacks, defended vs undefended
+python -m eval.data_quality                  # data gaps and the investigations they taint
+python scripts/embed_closed_cases.py         # fill ClosedCase.emb for GraphRAG precedent (once)
+cd backend && python -m pytest tests/unit/test_adjudicator.py tests/unit/test_decisions_backend.py tests/unit/test_auth.py tests/unit/test_audit.py -q
 ```
 
 ## 5. What each answer field honestly reports
