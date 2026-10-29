@@ -84,6 +84,10 @@ def build_answer(
         evidence.append(_ev(f"Decision model ({a.model}) assessed {a.verdict} at {a.fraud_probability:.2f}: {a.rationale}",
                             f"adjudicator(model={a.model}, case={case_id})", list(a.cited_txn_ids) or [flagged_txn_id],
                             source="external"))
+    if d.vector_status and d.vector_status != "ok":
+        # Never silent: precedent that should have come from vector search did not.
+        evidence.append(_ev(f"Vector precedent was not used for this case ({d.vector_status}); precedent came from "
+                            "graph links only.", f"vector_search(case={case_id})", [flagged_txn_id]))
     if d.injection_spans:
         evidence.append(_ev("The trigger text contains instruction-like wording aimed at an automated system "
                             f"({'; '.join(sorted(set(d.injection_spans))[:3])}); it was treated as data and did not "
@@ -181,7 +185,8 @@ def build_answer(
         "sar": sar,
         "stop_reason": f"Stopped once the decision was {d.verdict} ({d.decided_by}); {sar_reason}",
         "tool_calls": tool_calls,
-        "tokens": d.adjudication.tokens if d.adjudication else 0,
+        # Every model token this case spent: the decision model and the GraphRAG query embedding.
+        "tokens": (d.adjudication.tokens if d.adjudication else 0) + d.embed_tokens,
         "latency_s": round(latency_s, 2),
     }
     AnswerFile.model_validate(answer)  # every structural invariant, before anything is written

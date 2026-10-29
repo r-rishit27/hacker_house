@@ -70,7 +70,8 @@ R7 → model (gated). Reproduce with `python -m eval.overfit_check [--model]`.
 
 | measurement | rules only | rules + model |
 |---|---|---|
-| Round 1 replay (in-sample) | 16 correct · 3 uncertain · 1 wrong · 0 harmed | 17 · 2 · 1 · 0 |
+| Round 1 replay (in-sample), local mirror | 16 correct · 3 uncertain · 1 wrong · 0 harmed | 17 · 2 · 1 · 0 |
+| Round 1, live on TigerGraph (model, vector precedent, write-back, audit) | — | **16 · 3 · 1 · 0**, 20/20 written and read back |
 | held-out cleared alerts called fraud (innocent harmed) | 2.0% (n=300) | 5.0% (n=80) |
 | held-out confirmed frauds kept as fraud (as customer reports) | 299/300 | 79/80 |
 | January look-alike groups (card-present, subscriptions, usual amounts) | 21/21 legitimate | 21/21 |

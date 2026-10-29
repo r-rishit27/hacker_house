@@ -1,86 +1,59 @@
 # Resilience statement — Sentinel, Round 2
 
-## What we depend on
+## Dependencies, and what happens when each fails
 
-| dependency | used for | if it fails |
+| dependency | used for | on failure |
 |---|---|---|
-| **TigerGraph Savanna**, graph `GRAPH_GOA` (33 installed queries) | every fact: card history, devices, recipients, amount bands, closed cases | **Fail closed.** Unreachable at start: exit 2, nothing written. A query fails mid-case: `GraphUnavailable`, the case is reported failed and **not written**; other cases continue. No silent fallback to the local mirror. |
-| **OpenAI `POST /v1/decisions`**, model `gpt-6-luna` | five calibrated probabilities on cases the rules cannot settle | **Fail closed.** Timeout, HTTP error, malformed reply, a missing predicate or a probability outside [0, 1]: the case becomes `uncertain` + `ESCALATE_TO_ANALYST`. Never a guessed verdict. |
-| Python policy engine (in process) | every action and approval route; the report decision | No external dependency. |
-| Local DuckDB mirror `data/lab.duckdb` | backtests only (`--source lab`) | Never used unless asked for; every evidence ref then names it. |
+| TigerGraph Savanna, `GRAPH_GOA` (33 installed queries) | every fact; case write-back and read-back | **Fail closed.** Unreachable: exit 2, nothing written. A query fails mid-case: the case is reported failed, not written, and logged; others continue. Never falls back to the local mirror. |
+| OpenAI `POST /v1/decisions`, `gpt-6-luna` | five probabilities on cases the rules cannot settle | **Fail closed.** Timeout, HTTP error, malformed reply, missing predicate: `uncertain` + `ESCALATE_TO_ANALYST`. |
+| OpenAI embeddings, `OPENAI_EMBEDDING_MODEL` | GraphRAG precedent query | Precedent comes from graph links only, and the answer file says so in its evidence. |
+| Policy engine, approval chain (in process) | every action, route and report decision | No external dependency. |
+
+Malformed alerts (unknown trigger type, bad timestamp, unknown card or transaction, a
+card not owned by the customer) are rejected before any query, with the reason, and
+nothing is written. The workspace auto-stops when idle: `python scripts/warmup.py`
+waits for it and prints READY.
 
 ## What leaves the bank's boundary
 
-- **To TigerGraph Savanna** (third-party cloud): the dataset itself — transactions,
-  cards, devices, closed cases. Pseudonymous ids only; the data holds no names,
-  card numbers or addresses.
-- **To OpenAI**, only on a tricky case: one evidence bundle — the flagged
-  transaction and up to 35 nearby ones (ids, amounts, timestamps, product code,
-  billing-region code, e-mail *domain*, device-profile hash, proxy flag, the bank's
-  risk score), the card's baseline statistics, detector findings, up to 8 linked
-  closed cases with their analyst notes (truncated to 320 characters), and the
-  case's `trigger_text` quoted as untrusted data. Nothing else; no credentials.
-- **To OpenAI embeddings** (`OPENAI_EMBEDDING_MODEL`, 256 dimensions): the analyst
-  notes of the 5,585 closed cases, once, to fill `ClosedCase.emb`; and per tricky
-  case a one-paragraph description of the flagged purchase (amount, product, region
-  code, device/proxy flags, which anomalies are unexplained, detector findings).
-- **Nothing** goes to any other service. No customer-facing message is sent; the
-  evidence-request replies are simulated and stated as assumptions.
+- **TigerGraph Savanna** (third-party cloud): the dataset — pseudonymous ids, amounts,
+  dates, codes. It holds no names, card numbers or addresses.
+- **OpenAI decisions**, tricky cases only: the flagged transaction and up to 35 nearby
+  ones, the card's baseline, detector findings, up to 8 linked closed cases with notes
+  truncated to 320 characters, and `trigger_text` quoted as untrusted data.
+- **OpenAI embeddings**: the 5,585 closed-case notes, once; per tricky case a
+  one-paragraph description of the flagged purchase.
+- Nothing else, to no other service. No customer-facing message is sent; evidence
+  replies are simulated and stated as assumptions, and none mentions a report.
 
 ## Hostile input
 
-`trigger_text` never reaches the model as an instruction: it is quoted inside the
-bundle as `untrusted_text`, scanned for instruction-shaped spans, and any hit is
-recorded as evidence. The model returns only probabilities; **code** turns them
-into a verdict, so injected text cannot name an action, a route or an approval.
-The model cannot overrule a detector, cannot overrule R2 on a customer denial,
-and cannot block a single charge on its own (held-out evidence: §4 of
-`ROUND2_FINDINGS.md`).
+Free text never reaches a rule (12 attacks × 20 cases: 0 verdicts moved). The model
+gets it quoted and scanned, returns only probabilities, and code makes the verdict; it
+cannot overrule a detector or R2, or block a single charge alone. Undefended, 3 of 36
+attack runs moved the verdict toward the attacker; defended, 0 (`eval/attacks.py`).
 
-## Approvals
+## Approvals and identity
 
-This runner **recommends**; it executes nothing. Every `BLOCK_CARD`,
-`DECLINE_TRANSACTION` (L1) and `FILE_REPORT`, `BLOCK_ALL_CARDS` (L2) it recommends is
-recorded as `approval.requested` in the audit ledger. Only a **server-signed
-identity** can decide one (`api/auth.py`: HMAC-SHA256 over user, role and expiry,
-issued with `python -m api.auth mint`), and only if its role is on that route's
-approver list. The role comes from the verified token alone; a role header is
-ignored, a missing, forged or expired token is a 401. A refused attempt is itself
-recorded. Tested: an analyst token sent with a forged `fraud_manager` header stays
-an analyst; a team lead cannot approve L2 (`tests/unit/test_auth.py`,
-`tests/unit/test_audit.py`). The Round 1 console API (`backend/api/`) uses the same
-check when `SENTINEL_AUTH_SECRET` is set and otherwise runs in a demo mode that marks
-every principal unauthenticated.
+People sign in with a username and password (salted PBKDF2, lock-out after five
+failures) and get an HttpOnly session signed with `SENTINEL_AUTH_SECRET`. One table
+(`backend/api_v2/rbac.py`) decides what analysts, team leads, fraud managers and the
+read-only regulator may see and do, and the server checks it on every request. L1/L2
+actions wait for a person whose role is on the route's approver list; a refused attempt
+is recorded. A role sent in a header is ignored.
 
-## Determinism
+## Logging
 
-The rules are deterministic. The decision model returned identical probabilities on
-three repeated runs of HHG-015 and HHG-017 (0.97 and 0.09). The graph and mirror
-give identical decisions on all 20 Round 1 cases (`eval/graph_parity.py`).
+`audit/ledger.jsonl`, append-only and hash-chained: every graph query with parameters
+and a result digest, each detector, the model's scores, the decision, actions before and
+after evidence, write-back and read-back, every sign-in, refusal, approval, status change
+and failure. Editing any past entry breaks the chain at that entry; the regulator view
+recomputes it in the browser. E-mail addresses, phone numbers and card numbers in free
+text are masked before writing. Secrets are never logged or committed.
 
-## What is logged
+## Determinism and known weak points
 
-- `audit/ledger.jsonl`, append-only and **hash-chained**: every graph query with its
-  parameters and a digest of the rows returned, each detector, the model's five
-  scores, the decision, the actions before and after the evidence request, the
-  graph write-back and its read-back, every approval request, refusal, approval and
-  status change, and every failure. Each entry carries the SHA-256 of the one before;
-  `sentinel.typologies.audit.verify` (or the regulator view, in the browser) names
-  the first altered entry.
-
-- `run_log.csv`, one row per case: start time, source, latency, graph queries,
-  model calls, model tokens, model id, which rule decided, verdict, probability.
-- Every evidence claim in an answer file carries its source: detector or query, its
-  parameters, the as-of time and the store that answered — re-runnable.
-- The model's five probabilities are recorded as evidence on every case it saw.
-- Secrets are never logged: `.env` is git-ignored, the TigerGraph token is minted
-  at run time and kept in memory.
-
-## Known weak points
-
-- The Savanna workspace auto-stops when idle; the first request after that fails
-  for ~20 s while it starts. The run fails closed: run `python scripts/warmup.py`
-  a minute before a drill (it waits for the workspace and checks counts and a query).
-- One Round 1 case (HHG-011, a 10,306-transaction card) needs 373 graph queries
-  and 111 s; median cases take 1–4 s.
-- Episode scoping misses part of the episode in 35% of historical fraud cases.
+The rules are deterministic, and the model returned identical scores on repeated runs.
+Graph and mirror give identical decisions on all 20 Round 1 cases. Weak points: a card
+with 10,306 transactions takes 170 s (median case 8 s); episode scoping misses part of
+the episode in 35% of historical frauds; the R7 rule rests on one Round 1 case.

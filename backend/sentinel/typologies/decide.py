@@ -59,6 +59,9 @@ class Decision:
     decided_by: str  # "typology" | "rule_R2" | "explained" | "model" | "model_failed_closed"
     injection_spans: list[str] = field(default_factory=list)
     precedent: list[dict] = field(default_factory=list)
+    #: Tokens of the GraphRAG query embedding, and why vector precedent did not run if it did not.
+    embed_tokens: int = 0
+    vector_status: str = ""
     adjudication: Adjudication | None = None
 
 
@@ -160,7 +163,7 @@ def decide(
     unexplained = [a for a in anoms if not set(a.explained_by) & ex_keys]
     spans = scan_injection(trigger_text)
 
-    found: dict = {"precedent": []}  # filled once retrieval has run; early returns carry none
+    found: dict = {"precedent": [], "embed_tokens": 0, "vector_status": ""}  # filled once retrieval has run
 
     def out(verdict, p, pattern, desc, affected, decided_by, reasons, hit=None, adj=None) -> Decision:
         return Decision(
@@ -168,6 +171,7 @@ def decide(
             list(hit.connected_card_ids) if hit else [], hit.shared if hit else "", reasons,
             [f"{a.key}: {a.detail}" for a in unexplained], [e.reason for e in exps], hits, decided_by,
             injection_spans=spans, adjudication=adj, precedent=found["precedent"],
+            embed_tokens=found["embed_tokens"], vector_status=found["vector_status"],
         )
 
     # 1. A decisive typology anchored on this case.
@@ -207,6 +211,9 @@ def decide(
             vector_error = f"vector precedent unavailable: {type(exc).__name__}: {str(exc)[:160]}"
         precedent = fuse(precedent, vector_hits)
     found["precedent"] = precedent
+    if getattr(src, "vector", None) is not None:
+        found["embed_tokens"] = getattr(src.vector, "last_tokens", 0)
+        found["vector_status"] = vector_error or "ok"
     lookalikes = src.cleared_lookalikes([a.key for a in anoms], as_of) if hasattr(src, "cleared_lookalikes") else []
     context = src.history_context() if hasattr(src, "history_context") else {}
     episode_ids = _episode(f, hist, after)

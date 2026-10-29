@@ -34,13 +34,43 @@ def prior_cases(src, card: str, before: datetime) -> list[dict]:
 
 
 RUN_LOG_FIELDS = ("case_id", "started_at", "source", "latency_s", "graph_queries", "model_calls", "model_tokens",
-                  "model", "decided_by", "verdict", "fraud_probability")
+                  "embedding_tokens", "model", "decided_by", "verdict", "fraud_probability")
+
+
+class InvalidAlert(ValueError):
+    """The alert row itself is malformed; nothing is investigated."""
+
+
+def validate_alert(row: dict) -> None:
+    """Check an alert before any query runs, and say exactly what is wrong."""
+    from sentinel.domain.enums import TriggerType
+
+    problems = []
+    for k in ("case_id", "opened_at", "trigger_type", "flagged_txn_id", "card_id", "customer_id"):
+        if not str(row.get(k) or "").strip():
+            problems.append(f"{k} is empty")
+    try:
+        datetime.fromisoformat(str(row.get("opened_at")))
+    except ValueError:
+        problems.append(f"opened_at {row.get('opened_at')!r} is not a timestamp")
+    if row.get("trigger_type") not in {t.value for t in TriggerType}:
+        problems.append(f"trigger_type {row.get('trigger_type')!r} is not one of {[t.value for t in TriggerType]}")
+    if not str(row.get("flagged_txn_id", "")).isdigit():
+        problems.append(f"flagged_txn_id {row.get('flagged_txn_id')!r} is not a transaction id")
+    card, cust = str(row.get("card_id", "")), str(row.get("customer_id", ""))
+    if card and cust and not card.startswith(cust + "-K"):
+        problems.append(f"card {card} does not belong to customer {cust}")
+    if len(str(row.get("trigger_text", ""))) > 5000:
+        problems.append("trigger_text is longer than 5,000 characters")
+    if problems:
+        raise InvalidAlert("; ".join(problems))
 
 
 def run_case(row: dict, src: DuckTxnSource, *, use_model: bool, log: list | None = None, ledger=None) -> dict:
     from sentinel.typologies import decide as D
     from sentinel.typologies.audit import QueryRecorder, code_version, digest
 
+    validate_alert(row)
     t0, calls0 = time.perf_counter(), src.calls
     started = datetime.now().isoformat(timespec="seconds")
     as_of = datetime.fromisoformat(row["opened_at"])
@@ -110,6 +140,7 @@ def run_case(row: dict, src: DuckTxnSource, *, use_model: bool, log: list | None
         log.append({"case_id": row["case_id"], "started_at": started, "source": getattr(src, "label", "?"),
                     "latency_s": ans["latency_s"], "graph_queries": ans["tool_calls"],
                     "model_calls": int(a is not None), "model_tokens": a.tokens if a else 0,
+                    "embedding_tokens": d.embed_tokens,
                     "model": a.model if a else "", "decided_by": d.decided_by, "verdict": d.verdict,
                     "fraud_probability": d.fraud_probability})
     return ans
@@ -197,6 +228,11 @@ def main(argv: list[str] | None = None) -> int:
               f"sar={ans['sar']['file']}")
     if log:
         path = out.parent / "run_log.csv"
+        if path.exists():
+            with open(path, encoding="utf8") as fh:
+                header = fh.readline().strip().split(",")
+            if header != list(RUN_LOG_FIELDS):  # an older layout: keep it, never mix columns
+                path.rename(path.with_name(f"run_log.{datetime.now():%Y%m%d%H%M%S}.old.csv"))
         new_file = not path.exists()
         with open(path, "a", newline="", encoding="utf8") as fh:
             w = csv.DictWriter(fh, fieldnames=RUN_LOG_FIELDS)
@@ -206,7 +242,7 @@ def main(argv: list[str] | None = None) -> int:
         lat = sorted(r["latency_s"] for r in log)
         p95 = lat[min(len(lat) - 1, int(0.95 * len(lat)))]
         print(f"{len(log)} case(s): median {lat[len(lat) // 2]:.1f}s, p95 {p95:.1f}s, "
-              f"{sum(r['graph_queries'] for r in log)} graph queries, {sum(r['model_tokens'] for r in log)} model tokens"
+              f"{sum(r['graph_queries'] for r in log)} graph queries, {sum(r['model_tokens'] for r in log)} model + {sum(r['embedding_tokens'] for r in log)} embedding tokens"
               f" -> {path}")
     return 1 if failed else 0
 

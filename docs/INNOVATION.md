@@ -19,7 +19,7 @@ never tuned on.
 
 | | Round 1 submission | with the idea |
 |---|---|---|
-| Round 1's 20 cases, real outcomes | 6 correct · 4 innocent customers blocked | **17 correct · 0 blocked** |
+| Round 1's 20 cases, real outcomes, run live on the graph | 6 correct · 4 innocent customers blocked | **16 correct · 3 uncertain · 1 wrong · 0 blocked** |
 | HHG-006 (structuring, 12 cards) | uncertain, wrong pattern | **fraud, undocumented, 11 connected cards, report filed** |
 | HHG-014 (device ring, `D2c2006f554c8`) | uncertain, wrong pattern | **fraud, undocumented, 19 linked cards, report filed** |
 
@@ -38,7 +38,7 @@ correctly, from the graph, with the linked cards named.
 
 ## The harness changed the design — the ablation
 
-The harness is not decoration; it overturned three things we had built:
+The harness is not decoration; it overturned or qualified four things we had built:
 
 1. A recipient detector that called 43 of 234 July innocents fraud, because its
    "previous six months" ran off the start of the data. Fixed with a coverage guard.
@@ -48,6 +48,10 @@ The harness is not decoration; it overturned three things we had built:
    penalty.
 3. A logistic look-alike model with cross-validated AUC 0.92 that had learned "new
    device ⇒ innocent" and failed on the held-out twenty. Rejected.
+4. GraphRAG vector precedent, measured rather than assumed: on the live graph run it
+   moved HHG-017 from legitimate to uncertain (16 correct instead of 17 on the
+   mirror). It stays, because it gives the examiner cited precedent, but it is not
+   claimed as an accuracy gain.
 
 Ablation on the Round 1 replay (each rule switched off): the R1 weak-signal rule is
 worth 4 cases and generalises to held-out innocents; R7 is worth one (HHG-004) and

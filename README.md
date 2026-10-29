@@ -37,9 +37,14 @@ rebuilt with January 2017 added. Start here:
 | **Resilience statement** | [docs/RESILIENCE.md](docs/RESILIENCE.md) |
 | **Innovation claim** | [docs/INNOVATION.md](docs/INNOVATION.md) |
 
-Round 1's twenty, scored against their real outcomes: **6 correct, 4 innocent
-customers blocked → 17 correct, 0 blocked**; on held-out cleared alerts the rules
-call 2.0% of innocent customers fraud.
+Round 1's twenty, scored against their real outcomes, **run live on the graph**
+(TigerGraph, decision model, vector precedent, write-back and audit trail on):
+**6 correct, 4 innocent customers blocked → 16 correct, 3 uncertain, 1 wrong, 0
+blocked**, every case written to the graph and read back. On the local mirror the
+same code scores 17 (HHG-017 clears there; on the graph its model score stays above
+the clearance line). On held-out cleared alerts the rules call 2.0% of innocent
+customers fraud. `python -m eval.self_grade` re-runs the grader's published hard and
+policy checks: 0 findings on all twenty.
 
 ---
 

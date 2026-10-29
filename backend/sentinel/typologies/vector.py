@@ -35,6 +35,8 @@ class VectorPrecedent:
         self._m: np.ndarray | None = None
         self._cache: dict[str, np.ndarray] = {}
         self.model = os.getenv("OPENAI_EMBEDDING_MODEL", "")
+        #: Embedding tokens spent by the last search, so the answer can report them.
+        self.last_tokens = 0
         self.dims = int(os.getenv("OPENAI_EMBEDDING_DIMENSIONS", "256"))
 
     def _load(self) -> None:
@@ -61,11 +63,13 @@ class VectorPrecedent:
             from openai import OpenAI
 
             r = OpenAI().embeddings.create(model=self.model, dimensions=self.dims, input=[text[:4000]])
+            self.last_tokens = int(getattr(r.usage, "total_tokens", 0) or 0)
             v = np.asarray(r.data[0].embedding, dtype=np.float32)
             self._cache[text] = v / max(np.linalg.norm(v), 1e-9)
         return self._cache[text]
 
     def search(self, text: str, before: datetime, k: int = 8) -> list[dict]:
+        self.last_tokens = 0  # a cached query embedding costs nothing
         self._load()
         if self._m is None or not len(self._m):
             return []

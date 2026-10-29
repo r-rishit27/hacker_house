@@ -21,6 +21,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import subprocess
 import threading
 from datetime import datetime
@@ -46,6 +47,32 @@ def code_version() -> str:
         return "unknown"
 
 
+#: Free-text fields written by people (customers, analysts, approvers). Personal data in
+#: them is masked before the entry is written; ids, amounts and timestamps elsewhere are
+#: pseudonymous facts and are kept, because the trail must stay checkable.
+FREE_TEXT = frozenset({"trigger_text", "note", "why", "assumed_response", "error", "username_attempted"})
+_EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+_CARD = re.compile(r"\b(?:\d[ -]?){12,18}\d\b")
+_PHONE = re.compile(r"(?:\+\d{1,3}[ .-]?)?\(?\b\d{3}\)?[ .-]\d{3}[ .-]\d{4}\b|\+\d{8,15}\b")  # phone shapes only, so dates and times survive
+
+
+def redact(text: str) -> str:
+    """Mask e-mail addresses, card-number-like digit runs and phone numbers."""
+    t = _EMAIL.sub("[email]", text)
+    t = _CARD.sub("[card number]", t)
+    return _PHONE.sub("[phone]", t)
+
+
+def _scrub(obj, key: str = ""):
+    if isinstance(obj, dict):
+        return {k: _scrub(v, k) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_scrub(v, key) for v in obj]
+    if isinstance(obj, str) and key in FREE_TEXT:
+        return redact(obj)
+    return obj
+
+
 class Ledger:
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
@@ -67,7 +94,7 @@ class Ledger:
         with _LOCK:
             seq, prev = self._last
             entry = {"seq": seq + 1, "at": datetime.now().isoformat(timespec="milliseconds"), "case_id": case_id,
-                     "kind": kind, "actor": actor, "role": role, "data": data, "prev_hash": prev}
+                     "kind": kind, "actor": actor, "role": role, "data": _scrub(data), "prev_hash": prev}
             entry["hash"] = hashlib.sha256((prev + _canon({k: v for k, v in entry.items() if k != "hash"})).encode()).hexdigest()
             with open(self.path, "a", encoding="utf8") as fh:
                 fh.write(_canon(entry) + "\n")

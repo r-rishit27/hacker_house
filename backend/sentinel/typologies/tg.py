@@ -26,6 +26,19 @@ class GraphUnavailable(RuntimeError):
     """TigerGraph could not answer; the investigation must stop, not guess."""
 
 
+class UnknownId(LookupError):
+    """The graph answered: the id in the alert does not exist. Bad input, not an outage."""
+
+
+def _why(exc: Exception) -> str:
+    """One readable line, not the workspace's HTML holding page."""
+    text = str(exc)
+    if "Starting workspace" in text:
+        return ("TigerGraph workspace is starting (Savanna stops it when idle). Run `python scripts/warmup.py`, "
+                "wait for READY, then retry")
+    return f"cannot connect to TigerGraph: {type(exc).__name__}: {text[:200]}"
+
+
 def _none(v):
     return None if v in ("", None, "-1.0") else v
 
@@ -52,7 +65,7 @@ class TigerGraphTxnSource:
             try:
                 conn = cfg.connect(verbose=False)
             except Exception as exc:
-                raise GraphUnavailable(f"cannot connect to TigerGraph: {type(exc).__name__}: {exc}") from exc
+                raise GraphUnavailable(_why(exc)) from exc
         self.conn = conn
         self.calls = 0
         #: Set by the runner: called with (query, params, rows) for every query, for the audit trail.
@@ -75,7 +88,10 @@ class TigerGraphTxnSource:
         try:
             res = self.conn.runInstalledQuery(name, params=params, timeout=120_000)
         except Exception as exc:
-            raise GraphUnavailable(f"query {name} failed: {type(exc).__name__}: {str(exc)[:200]}") from exc
+            if "Failed to convert user vertex id" in str(exc):
+                raise UnknownId(f"{name}: {', '.join(f'{k}={v}' for k, v in params.items() if isinstance(v, tuple))} "
+                                "does not exist in the graph") from exc
+            raise GraphUnavailable(f"query {name} failed: {_why(exc)}") from exc
         for block in res:
             if key in block:
                 # PRINT V[V.attr, ...] returns keys as "V.attr"; strip the alias.
@@ -91,7 +107,10 @@ class TigerGraphTxnSource:
         try:
             res = self.conn.runInstalledQuery(name, params=params, timeout=120_000)
         except Exception as exc:
-            raise GraphUnavailable(f"query {name} failed: {type(exc).__name__}: {str(exc)[:200]}") from exc
+            if "Failed to convert user vertex id" in str(exc):
+                raise UnknownId(f"{name}: {', '.join(f'{k}={v}' for k, v in params.items() if isinstance(v, tuple))} "
+                                "does not exist in the graph") from exc
+            raise GraphUnavailable(f"query {name} failed: {_why(exc)}") from exc
         out = {k: [{a.split(".", 1)[-1]: v for a, v in x["attributes"].items()} for x in vs]
                for block in res for k, vs in block.items()}
         if self.recorder:
