@@ -1,0 +1,12 @@
+{
+ "report_hash": "06ec4a4a1ff2c0d0fcb1f6ad239bd7d9012bb801d4245c024e1017cd3f94d665",
+ "files": {
+  "transactions_2017q1.csv.gz": "c31e15f66d72844a69fdbd2f437b71f0b9aab187aee33ea7070479ca7a0a15fc",
+  "identity_2017q1.csv": "e174b0b1be53ff1c87b79ecdfdcfa4909b795fc8a3255354b422ef5b0dffce80",
+  "closed_cases_history.csv": "d8cb78464d81881b4fcc780e3dc5af83e5c9f88b3cd5f7984fb2602b16a5f7ee"
+ },
+ "approved_by": "rishit.rastogi",
+ "role": "team_lead",
+ "approved_at": "2026-10-30T01:12:12",
+ "receipt": "339ddd0ef064e5cd1c6c2343f830336bc34577189c1507114ee14a3f62af0aa6"
+}
