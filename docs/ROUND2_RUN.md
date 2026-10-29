@@ -75,13 +75,29 @@ python -m sentinel.typologies.approvals --ledger ../audit/ledger.jsonl pending -
 python -m sentinel.typologies.approvals --ledger ../audit/ledger.jsonl decide --case HHF-007 --action BLOCK_CARD --token <sv1...>
 ```
 
-## The service and the regulator's view
+## The service: sign-in, the investigator portal, the regulator's view
 
 ```bash
-cd backend && SENTINEL_RUN_DIR=../out uvicorn api_v2.app:app --port 8100
-# http://127.0.0.1:8100/regulator — investigations, examiner walkthrough, approval chain, change record
+cd backend
+python -m api_v2.users add --user priya --role team_lead --name "Priya"   # asks for the password; one per person
+SENTINEL_RUN_DIR=../out uvicorn api_v2.app:app --port 8100
+# http://127.0.0.1:8100/login
 python scripts/export_regulator_snapshot.py --run out --out regulator_snapshot.html   # read-only copy, no server
 ```
+
+Passwords are stored only as salted PBKDF2 hashes in `backend/var/users.json` (git-ignored);
+five wrong passwords lock an account for 15 minutes. A sign-in gives an HttpOnly session
+cookie signed with `SENTINEL_AUTH_SECRET`. What each role sees and may do comes from one
+table, `backend/api_v2/rbac.py`, checked by the server on every request:
+
+| Role | Lands on | Can |
+|---|---|---|
+| Analyst | Case portal | work the alert queue, start investigations, read case files and their audit trail |
+| Team lead | Case portal | the above, and approve or reject L1 actions (block card, decline) |
+| Fraud manager | Case portal | the above, approve or reject L2 actions (file report, block all cards), the full audit trail, the change record, the regulator overview, who has access |
+| Regulator | Regulator overview | read-only: every investigation, its approval chain, the change record, the hash-chained audit trail; cannot start, approve or change anything |
+
+Every sign-in, failed attempt, lock-out and refused request is a ledger entry (case `_access`).
 
 ## 3. The whole pack
 

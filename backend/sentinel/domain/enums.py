@@ -42,11 +42,15 @@ class Route(str, Enum):
 
 
 class Role(str, Enum):
-    """Who is acting. Authorization is real; authentication is demo-grade."""
+    """Who is acting. Signed identities (api/auth.py) carry one of these.
+
+    ``REGULATOR`` is an examiner: read-only, on no route's approver list, so it
+    can never approve an action — not even an ``auto`` one."""
 
     ANALYST = "analyst"
     TEAM_LEAD = "team_lead"
     FRAUD_MANAGER = "fraud_manager"
+    REGULATOR = "regulator"
 
 
 class Verdict(str, Enum):

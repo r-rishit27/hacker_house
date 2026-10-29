@@ -27,7 +27,9 @@ def main() -> None:
     ap.add_argument("--out", default=str(ROOT / "eval" / "out" / "regulator_snapshot.html"))
     a = ap.parse_args()
     os.environ["SENTINEL_RUN_DIR"] = str(Path(a.run).resolve())
-    os.environ.pop("SENTINEL_AUTH_SECRET", None)  # read in demo mode: the snapshot carries no identity
+    # Blank, not absent: the service loads .env but never overrides a variable already set,
+    # so the export reads in demo mode and the snapshot carries no identity.
+    os.environ["SENTINEL_AUTH_SECRET"] = ""
     from fastapi.testclient import TestClient
 
     from api_v2.app import app
@@ -41,7 +43,9 @@ def main() -> None:
         "ledger": c.get("/v2/ledger").text,
         "changes": c.get("/v2/changes").json(),
     }
-    page = (ROOT / "backend" / "api_v2" / "static" / "regulator.html").read_text(encoding="utf8")
+    from api_v2.app import themed
+
+    page = themed("regulator.html")  # shared theme and masthead script inlined, exactly as the service serves it
     # </ inside JSON would end the script element early; escape it.
     data = json.dumps(snap, ensure_ascii=False).replace("</", "<\\/")
     out = Path(a.out)

@@ -1,0 +1,236 @@
+<title>Sentinel Case Portal</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<!--THEME-->
+<style>
+/* Layout: the alert queue as a dense table on the left, the open case file on the right;
+   approvals and access as their own views. One column under 980px. */
+.wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 18px 40px; max-width: 1400px; margin: 0 auto; display: grid; gap: 16px }
+h1, h2, h3 { margin: 0; letter-spacing: -.01em; text-wrap: balance }
+h1 { font-size: 1.45rem } h2 { font-size: 1.05rem } h3 { font-size: .92rem }
+.head { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: end; justify-content: space-between }
+.cap { display: flex; flex-wrap: wrap; gap: 6px }
+.cap span { font-size: .76rem; padding: 2px 8px; border-radius: var(--radius-full); border: 1px solid var(--border); color: var(--fg-muted) }
+.cap span.on { border-color: var(--success); color: var(--success); background: var(--success-tint) }
+.grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 16px; align-items: start }
+@media (max-width: 980px) { .grid { grid-template-columns: 1fr } }
+.tablewrap { overflow-x: auto }
+table { border-collapse: collapse; width: 100%; font-size: .86rem }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; white-space: nowrap }
+th { font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--fg-subtle); font-weight: 600; background: var(--surface-2); position: sticky; top: 0 }
+td { font-variant-numeric: tabular-nums }
+tbody tr { cursor: pointer } tbody tr:hover { background: var(--surface-2) }
+tbody tr[aria-current="true"] { background: var(--accent-tint) }
+.ph { padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between }
+.pb { padding: 14px; display: grid; gap: 14px; min-width: 0 }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px 16px; margin: 0 }
+.facts dt { font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--fg-subtle) } .facts dd { margin: 0; font-weight: 600; overflow-wrap: anywhere }
+.meter { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center }
+.meter .track { height: 8px; background: var(--meter-track); border-radius: 4px; overflow: hidden }
+.meter .fill { height: 100% }
+.list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none }
+.list li { padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-md); font-size: .86rem; overflow-wrap: anywhere }
+.act { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-md) }
+.act .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
+.act textarea { width: 100%; min-height: 54px; padding: 7px 9px; border: 1px solid var(--border-strong); border-radius: var(--radius-md); resize: vertical }
+.locked { font-size: .82rem; color: var(--fg-muted) }
+.tl { display: grid; gap: 0; border-left: 2px solid var(--border); margin-left: 4px }
+.tl div { padding: 3px 0 7px 14px; position: relative; font-size: .82rem; overflow-wrap: anywhere }
+.tl div::before { content: ""; position: absolute; left: -6px; top: 8px; width: 10px; height: 10px; border-radius: 50%; background: var(--surface); border: 2px solid var(--txn) }
+.tl .k { font-family: var(--font-mono); color: var(--accent); font-size: .76rem }
+.tl .k-approval-denied { color: var(--danger) } .tl .k-approval-granted { color: var(--success) }
+.empty { padding: 26px 14px; color: var(--fg-muted) }
+[data-view] { display: grid; gap: 16px }
+.badge-you { background: var(--authority); color: var(--authority-contrast); border-radius: var(--radius-full); padding: 0 7px; font-size: .72rem; font-weight: 700 }
+</style>
+
+<div class="mast"><div class="mast-in"><a class="brand" href="/portal"><span class="brand-mark" aria-hidden="true"></span>Sentinel</a>
+  <nav class="navlinks" id="nav" aria-label="Pages"></nav><div class="who" id="who"></div></div></div>
+<!--NAV-->
+
+<div class="wrap">
+  <div id="flash" role="status" hidden></div>
+
+  <section data-view="queue">
+    <div class="head"><div style="display:grid;gap:4px"><span class="eyebrow">Investigator portal</span><h1>Alert queue</h1>
+      <span class="muted" id="qline">Loading…</span></div>
+      <div style="display:grid;gap:6px;justify-items:end"><span class="eyebrow">What you can do here</span><div class="cap" id="caps"></div></div></div>
+    <div class="grid">
+      <div class="panel"><div class="tablewrap"><table aria-label="Alerts"><thead><tr><th>Alert</th><th>Opened</th><th>Trigger</th><th>Verdict</th><th>Status</th><th>Needs</th></tr></thead><tbody id="rows"></tbody></table></div></div>
+      <div class="panel" id="file"><div class="empty">Choose an alert to open its case file.</div></div>
+    </div>
+  </section>
+
+  <section data-view="approvals" hidden>
+    <div class="head"><div style="display:grid;gap:4px"><span class="eyebrow">Investigator portal</span><h1>Approvals awaiting you</h1>
+      <span class="muted">Only actions on the routes your role may decide are listed. Each decision is signed with your identity and cannot be edited afterwards.</span></div></div>
+    <div class="panel"><div id="approvalList" class="pb"></div></div>
+  </section>
+
+  <section data-view="access" hidden>
+    <div class="head"><div style="display:grid;gap:4px"><span class="eyebrow">Administration</span><h1>Access &amp; roles</h1>
+      <span class="muted">Who can sign in, and what each role is allowed to see and do. The server checks these on every request.</span></div></div>
+    <div class="grid">
+      <div class="panel"><div class="ph"><h2>People</h2></div><div class="tablewrap"><table><thead><tr><th>Username</th><th>Name</th><th>Role</th><th>State</th></tr></thead><tbody id="people"></tbody></table></div></div>
+      <div class="panel"><div class="ph"><h2>Role permissions</h2></div><div class="tablewrap"><table id="matrix"></table></div></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const { esc, ROLE_NAME } = window.SentinelNav;
+  const $ = (s) => document.querySelector(s);
+  const money = (n) => n == null ? "—" : "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const pct = (n) => n == null ? "—" : (Number(n) * 100).toFixed(0) + "%";
+  const when = (s) => s ? String(s).replace("T", " ").slice(0, 16) : "—";
+  let me = null, perms = new Set(), alerts = [], current = null;
+  const api = async (path, opts = {}) => {
+    const r = await fetch(path, { credentials: "same-origin", headers: { "Content-Type": "application/json" }, ...opts });
+    if (r.status === 401) { location.href = "/login?next=" + encodeURIComponent(location.pathname + location.hash); throw new Error("Signed out."); }
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.detail || `${path} answered ${r.status}`);
+    return d;
+  };
+  const flash = (t, cls) => { const f = $("#flash"); f.hidden = false; f.className = "notice " + cls; f.textContent = t; clearTimeout(flash.t); flash.t = setTimeout(() => (f.hidden = true), 6000); };
+  const chip = (v) => v ? `<span class="chip v-${esc(v)}">${esc(v)}</span>` : '<span class="chip v-none">not investigated</span>';
+  const meterColor = (p) => `var(--meter-${p <= .15 ? 0 : p <= .4 ? 1 : p <= .7 ? 2 : 3})`; // the console's meter bands
+  const NEEDS = { L1: "team lead or fraud manager", L2: "fraud manager" };
+
+  function caps() {
+    $("#caps").innerHTML = (me.capabilities || []).map((c) => `<span class="${c.granted ? "on" : ""}" title="${esc(c.permission)}">${c.granted ? "✓" : "–"} ${esc(c.what)}</span>`).join("");
+  }
+  function rows() {
+    const done = alerts.filter((a) => a.investigation).length, waiting = alerts.reduce((n, a) => n + a.awaiting_you, 0);
+    $("#qline").textContent = `${alerts.length} alerts · ${done} investigated · ${waiting} action${waiting === 1 ? "" : "s"} awaiting your approval`;
+    $("#rows").innerHTML = alerts.map((a) => {
+      const s = a.investigation;
+      return `<tr data-id="${esc(a.case_id)}" aria-current="${current === a.case_id}" tabindex="0">
+        <td class="mono">${esc(a.case_id)}</td><td>${when(a.opened_at)}</td><td>${esc(a.trigger_type.replace("_", " "))}</td>
+        <td>${s?.failed && !s.verdict ? '<span class="chip v-failed">failed closed</span>' : chip(s?.verdict)}</td><td class="muted">${esc(s?.status || "new")}</td>
+        <td>${(s?.pending_routes || []).map((r) => `<span class="route route-${esc(r)}">${esc(r)}</span>`).join(" ")}${a.awaiting_you ? ` <span class="badge-you">you</span>` : ""}</td></tr>`;
+    }).join("");
+  }
+
+  async function openCase(id) {
+    current = id; rows();
+    const a = alerts.find((x) => x.case_id === id);
+    if (!a.investigation) {
+      $("#file").innerHTML = `<div class="ph"><h2 class="mono">${esc(id)}</h2>${chip(null)}</div><div class="pb">
+        <dl class="facts"><div><dt>Opened</dt><dd>${when(a.opened_at)}</dd></div><div><dt>Trigger</dt><dd>${esc(a.trigger_type)}</dd></div>
+        <div><dt>Card</dt><dd class="mono">${esc(a.card_id)}</dd></div><div><dt>Bank risk score</dt><dd>${esc(a.risk_score)}</dd></div></dl>
+        ${perms.has("case.investigate") ? `<div class="row" style="display:flex;gap:8px;align-items:center"><button class="btn primary" type="button" id="inv">Investigate</button>
+          <span class="muted" style="font-size:.84rem">Reads the graph, runs the detectors and the decision model, writes the case back. About 10–60 seconds.</span></div>`
+          : '<p class="locked">Your role cannot start investigations.</p>'}</div>`;
+      const b = $("#inv"); if (b) b.addEventListener("click", () => investigate(id, b));
+      return;
+    }
+    $("#file").innerHTML = '<div class="empty">Opening the case file…</div>';
+    try { renderFile(await api(`/v2/investigations/${encodeURIComponent(id)}`)); } catch (e) { $("#file").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+  }
+
+  function actionBlock(cid, p) {
+    const may = perms.has(`approve.${p.route}`);
+    return `<div class="act"><div class="row"><b>${esc(p.action)}</b><span class="route route-${esc(p.route)}">${esc(p.route)}</span><span class="muted" style="font-size:.82rem">${esc(p.reason)}</span></div>
+      ${may ? `<label class="muted" style="font-size:.8rem" for="n-${esc(cid)}-${esc(p.action)}">Note for the record</label>
+        <textarea id="n-${esc(cid)}-${esc(p.action)}" placeholder="Why you approve or reject"></textarea>
+        <div class="row"><button class="btn good" type="button" data-decide="1" data-case="${esc(cid)}" data-action="${esc(p.action)}">Approve</button>
+        <button class="btn bad" type="button" data-decide="0" data-case="${esc(cid)}" data-action="${esc(p.action)}">Reject</button></div>`
+        : `<p class="locked">Awaiting a ${NEEDS[p.route] || "person with authority"}. Your role cannot decide ${esc(p.route)} actions.</p>`}</div>`;
+  }
+  function pendingOf(entries) {
+    const asked = entries.filter((e) => e.kind === "approval.requested");
+    const done = new Set(entries.filter((e) => e.kind === "approval.granted" || e.kind === "approval.rejected").map((e) => e.data.action));
+    return asked.filter((e) => !done.has(e.data.action)).map((e) => e.data);
+  }
+
+  function renderFile(inv) {
+    const a = inv.answer, c = a?.case, e = inv.entries || [];
+    const pend = pendingOf(e);
+    const decided = e.filter((x) => x.kind === "approval.granted" || x.kind === "approval.rejected" || x.kind === "approval.denied");
+    $("#file").innerHTML = `<div class="ph"><h2 class="mono">${esc(current)}</h2>${chip(c?.verdict)}<span class="muted">${esc(c?.status || "")}</span></div>
+      <div class="pb">
+        <div class="meter"><div class="track"><div class="fill" style="width:${((c?.fraud_probability || 0) * 100).toFixed(1)}%;background:${meterColor(c?.fraud_probability || 0)}"></div></div><b class="mono">${pct(c?.fraud_probability)}</b></div>
+        <dl class="facts"><div><dt>Pattern</dt><dd>${esc(c?.pattern)}</dd></div><div><dt>Exposure</dt><dd>${money(c?.exposure_usd)}</dd></div>
+          <div><dt>Affected</dt><dd class="mono">${esc((c?.affected_txn_ids || []).join(", ") || "none")}</dd></div><div><dt>Connected cards</dt><dd>${(c?.connected_card_ids || []).length}</dd></div>
+          <div><dt>Report</dt><dd>${a?.sar?.file ? "Recommended" : "Not required"}</dd></div><div><dt>Graph record</dt><dd class="mono">${c?.written_to_graph ? esc(c.graph_case_id) : "not written"}</dd></div></dl>
+        ${c?.pattern_description ? `<p style="margin:0;max-width:75ch">${esc(c.pattern_description)}</p>` : `<p class="muted" style="margin:0;max-width:75ch">${esc(c?.summary || "")}</p>`}
+        <div style="display:grid;gap:8px"><h3>Actions</h3>${pend.length ? pend.map((p) => actionBlock(current, p)).join("") : '<p class="muted" style="margin:0">Nothing is waiting for a person.</p>'}
+          ${decided.length ? `<ul class="list">${decided.map((d) => `<li><span class="chip ${d.kind === "approval.granted" ? "v-legitimate" : "v-fraud"}">${d.kind.split(".")[1]}</span> ${esc(d.data.action)} by <b>${esc(d.actor)}</b> (${esc(ROLE_NAME[d.role] || d.role)}) ${when(d.at)}${d.data.note ? ` — “${esc(d.data.note)}”` : ""}${d.data.why ? ` — ${esc(d.data.why)}` : ""}</li>`).join("")}</ul>` : ""}</div>
+        <div style="display:grid;gap:8px"><h3>Evidence</h3><ul class="list">${(c?.evidence || []).slice(0, 8).map((v) => `<li>${esc(v.claim)}<div class="mono muted" style="font-size:.74rem">${esc(v.ref)}</div></li>`).join("")}</ul></div>
+        ${perms.has("case.audit") ? `<div style="display:grid;gap:8px"><h3>Audit trail <span class="muted" style="font-weight:400">(${e.length} entries, hash-chained)</span></h3>
+          <div class="tl">${e.filter((x) => x.kind !== "step.query").map((x) => `<div><span class="k k-${x.kind.replace(".", "-")}">#${x.seq} ${esc(x.kind)}</span> <span class="muted">${when(x.at)} · ${esc(x.actor)}</span></div>`).join("")}</div>
+          <p class="muted" style="margin:0;font-size:.8rem">${e.filter((x) => x.kind === "step.query").length} graph queries are recorded with their parameters; the regulator's overview shows each one.</p></div>` : ""}
+      </div>`;
+  }
+
+  async function investigate(id, btn) {
+    btn.disabled = true; btn.textContent = "Investigating…";
+    try { const r = await api("/v2/investigations", { method: "POST", body: JSON.stringify({ case_id: id }) });
+      flash(`${id}: ${r.verdict}, status ${r.status}.`, "ok"); await loadQueue(); openCase(id);
+    } catch (e) { flash(e.message, "err"); btn.disabled = false; btn.textContent = "Investigate"; }
+  }
+  async function decide(btn) {
+    const cid = btn.dataset.case, action = btn.dataset.action, approve = btn.dataset.decide === "1";
+    const note = (document.getElementById(`n-${cid}-${action}`) || {}).value || "";
+    if (!approve && !note.trim()) { flash("Give a reason when you reject, so the analyst knows what to change.", "err"); return; }
+    btn.disabled = true;
+    try { await api(`/v2/investigations/${encodeURIComponent(cid)}/approvals`, { method: "POST", body: JSON.stringify({ action, approve, note }) });
+      flash(`${action} on ${cid} ${approve ? "approved" : "rejected"} and recorded.`, "ok"); await loadQueue();
+      if (location.hash === "#approvals") renderApprovals(); else openCase(cid);
+    } catch (e) { flash(e.message, "err"); btn.disabled = false; }
+  }
+
+  async function renderApprovals() {
+    const mine = alerts.filter((a) => a.awaiting_you);
+    if (!mine.length) { $("#approvalList").innerHTML = '<p class="muted" style="margin:0">Nothing is waiting for your approval.</p>'; return; }
+    const files = await Promise.all(mine.map((a) => api(`/v2/investigations/${encodeURIComponent(a.case_id)}`)));
+    $("#approvalList").innerHTML = files.map((inv, i) => {
+      const cid = mine[i].case_id, c = inv.answer?.case;
+      return `<div style="display:grid;gap:8px"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><h2 class="mono">${esc(cid)}</h2>${chip(c?.verdict)}
+        <span class="muted">${pct(c?.fraud_probability)} · ${money(c?.exposure_usd)} · ${esc(c?.pattern)}</span></div>
+        ${pendingOf(inv.entries || []).filter((p) => perms.has(`approve.${p.route}`)).map((p) => actionBlock(cid, p)).join("")}</div>`;
+    }).join('<hr style="border:0;border-top:1px solid var(--border);margin:6px 0">');
+  }
+
+  async function renderAccess() {
+    const d = await api("/v2/users");
+    $("#people").innerHTML = d.users.map((u) => `<tr><td class="mono">${esc(u.username)}</td><td>${esc(u.name)}</td>
+      <td><span class="role-badge role-${esc(u.role)}">${esc(ROLE_NAME[u.role] || u.role)}</span></td><td>${u.disabled ? "disabled" : u.locked ? "locked" : "active"}</td></tr>`).join("");
+    const roles = Object.keys(d.roles);
+    $("#matrix").innerHTML = `<thead><tr><th>Permission</th>${roles.map((r) => `<th>${esc(ROLE_NAME[r] || r)}</th>`).join("")}</tr></thead><tbody>
+      ${Object.entries(d.permissions).map(([p, w]) => `<tr style="cursor:default"><td style="white-space:normal">${esc(w)}<div class="mono muted" style="font-size:.72rem">${esc(p)}</div></td>
+        ${roles.map((r) => `<td>${d.roles[r].includes(p) ? '<span style="color:var(--success);font-weight:700">✓</span>' : '<span class="muted">–</span>'}</td>`).join("")}</tr>`).join("")}</tbody>`;
+  }
+
+  function route() {
+    let v = (location.hash || "#queue").slice(1);
+    const allowed = { queue: "queue.view", approvals: "approve.L1", access: "users.view" };
+    if (!allowed[v] || !perms.has(allowed[v])) v = "queue";
+    document.querySelectorAll("[data-view]").forEach((s) => (s.hidden = s.dataset.view !== v));
+    document.querySelectorAll("#nav a").forEach((a) => a.setAttribute("aria-current", (a.getAttribute("href") === "/portal" + (v === "queue" ? "" : "#" + v)) ? "page" : "false"));
+    if (v === "approvals") renderApprovals().catch((e) => flash(e.message, "err"));
+    if (v === "access") renderAccess().catch((e) => flash(e.message, "err"));
+  }
+  async function loadQueue() { const d = await api("/v2/queue"); alerts = d.alerts; rows(); }
+
+  document.addEventListener("click", (ev) => {
+    const d = ev.target.closest("[data-decide]"); if (d) return decide(d);
+    const r = ev.target.closest("tr[data-id]"); if (r) openCase(r.dataset.id);
+  });
+  document.addEventListener("keydown", (ev) => { const r = ev.target.closest && ev.target.closest("tr[data-id]"); if (r && ev.key === "Enter") openCase(r.dataset.id); });
+  window.addEventListener("hashchange", route);
+
+  (async () => {
+    try {
+      me = await SentinelNav.me();
+      if (!me.authenticated) { location.href = "/login"; return; }
+      if (me.actor_role === "regulator") { location.href = "/regulator"; return; }
+      perms = new Set(me.permissions); SentinelNav.render(me, "/portal"); caps();
+      await loadQueue(); route();
+      const first = alerts.find((a) => a.awaiting_you) || alerts.find((a) => a.investigation);
+      if (first && location.hash !== "#approvals" && location.hash !== "#access") openCase(first.case_id);
+    } catch (e) { if (e.message !== "signed out") flash(e.message, "err"); }
+  })();
+})();
+</script>
