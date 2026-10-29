@@ -54,6 +54,7 @@ text are masked before writing. Secrets are never logged or committed.
 ## Determinism and known weak points
 
 The rules are deterministic, and the model returned identical scores on repeated runs.
-Graph and mirror give identical decisions on all 20 Round 1 cases. Weak points: a card
-with 10,306 transactions takes 170 s (median case 8 s); episode scoping misses part of
+Graph and mirror give identical decisions on all 20 Round 1 cases. Weak points: the
+first case after the workspace wakes pays its start-up and the one-time vector load
+(warm it first); the largest card takes 17 s, others 1.5–6 s; episode scoping misses part of
 the episode in 35% of historical frauds; the R7 rule rests on one Round 1 case.

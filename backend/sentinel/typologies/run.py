@@ -84,6 +84,13 @@ def run_case(row: dict, src: DuckTxnSource, *, use_model: bool, log: list | None
             "thresholds": {"model_fraud_floor": D.MODEL_FRAUD_FLOOR, "very_low": D.VERY_LOW,
                            "uncertain_cap": 0.69}})
         src.recorder = QueryRecorder(ledger, cid)
+    if hasattr(src, "prefetch_devices"):
+        # One batched read for every device this card used in the episode window, instead
+        # of one query per device (360 on the largest Round 1 card).
+        from datetime import timedelta
+
+        recent = [t.device_key for t in src.card_txns(row["card_id"], as_of) if t.ts >= as_of - timedelta(days=35)]
+        src.prefetch_devices(recent, as_of - timedelta(days=180), as_of)
     priors = prior_cases(src, row["card_id"], as_of)
     d = decide(case_id=row["case_id"], trigger_type=row["trigger_type"], trigger_text=row.get("trigger_text", ""),
                card_id=row["card_id"], flagged_txn_id=int(row["flagged_txn_id"]), as_of=as_of, src=src,

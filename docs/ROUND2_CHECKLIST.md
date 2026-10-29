@@ -71,7 +71,7 @@ Brief: https://hhgoa-tg-round2.vercel.app/ · ✅ done and verified · ➖ parti
 | 4 | Evidence to SAR | ➖ filings with ids per sentence; no per-sentence citation links |
 | 6 | Regulator's view | ✅ Examiner Register, walkthrough, in-browser chain check |
 | 7 | Containment planner | ✅ beats block-all on every ring tested |
-| 9 | Speed and autonomy | ➖ p95 reported (170 s, one large card) |
+| 9 | Speed and autonomy | ✅ one batched device read per case (`ty_devices_batch`): the 10,306-transaction card went from 170 s / 373 queries to 17 s / 15; other cases 1.5–6 s once the workspace is warm (`scripts/warmup.py`); per-case latency, queries and tokens in `run_log.csv` |
 | 10 | Break the agent | ✅ 12 attacks, defended vs undefended |
 | 11 | Data quality detective | ✅ gaps, affected ids, tainted investigations |
 | 12 | Schema drift survival | ✅ drift report, approval by role, staging gate |

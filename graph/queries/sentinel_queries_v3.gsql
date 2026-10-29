@@ -127,3 +127,21 @@ CREATE OR REPLACE QUERY ty_device_fraud_history(VERTEX<DeviceProfile> d_in, DATE
   @@both = @@cards INTERSECT @@tied;
   PRINT @@cards.size() AS n_cards, @@both.size() AS n_fraud_cards;
 }
+
+// Batch read for one investigation: for a set of device profiles, every transaction in
+// [since, until) and the number of distinct cards that used each one before until.
+// Replaces one ty_device_txns round trip per device (360 on a 10,306-transaction card).
+CREATE OR REPLACE QUERY ty_devices_batch(SET<VERTEX<DeviceProfile>> ds, DATETIME since, DATETIME until)
+  FOR GRAPH @GRAPHNAME@ SYNTAX v1 {
+  MapAccum<STRING, SetAccum<STRING>> @@cards;
+  S = ds;
+  T = SELECT t FROM S:d -(DEVICE_USED_BY)-> Transaction:t WHERE t.ts < until
+      ACCUM @@cards += (d.device_key -> t.card_id);
+  W = SELECT t FROM T:t WHERE t.ts >= since;
+  PRINT W[W.txn_id, W.card_id, W.customer_id, W.ts, W.amt, W.product, W.channel, W.addr1,
+          W.p_email, W.r_email, W.device_key, W.device_new, W.proxy_flag, W.risk_score] AS W;
+  MapAccum<STRING, INT> @@n;
+  FOREACH (k, v) IN @@cards DO @@n += (k -> v.size()); END;
+  PRINT @@n AS n_cards;
+  PRINT @@cards AS cards;
+}

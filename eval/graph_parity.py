@@ -40,6 +40,10 @@ def main() -> None:
         for src in (lab, tg):
             t0, c0 = time.perf_counter(), src.calls
             as_of = datetime.fromisoformat(row["opened_at"])
+            if hasattr(src, "prefetch_devices"):  # exactly what the runner does
+                from datetime import timedelta
+                recent = [t.device_key for t in src.card_txns(row["card_id"], as_of) if t.ts >= as_of - timedelta(days=35)]
+                src.prefetch_devices(recent, as_of - timedelta(days=180), as_of)
             d = decide(case_id=row["case_id"], trigger_type=row["trigger_type"], trigger_text=row["trigger_text"],
                        card_id=row["card_id"], flagged_txn_id=int(row["flagged_txn_id"]), as_of=as_of, src=src,
                        prior_cases=src.prior_cases(row["card_id"], as_of), use_model=False)

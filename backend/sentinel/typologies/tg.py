@@ -129,8 +129,39 @@ class TigerGraphTxnSource:
     def card_txns(self, card_id: str, until: datetime) -> list[Txn]:
         return self._txns("ty_card_txns", {"c_in": (card_id,), "until": self._t(until)})
 
+    def prefetch_devices(self, device_keys: list[str], since: datetime, until: datetime) -> None:
+        """One round trip for every device a case will ask about: their transactions in
+        [since, until) and their card counts before until (ty_devices_batch)."""
+        keys = sorted({k for k in device_keys if k})
+        if not keys:
+            return
+        params = {"ds": [(k,) for k in keys], "since": self._t(since), "until": self._t(until)}
+        self.calls += 1
+        try:
+            res = self.conn.runInstalledQuery("ty_devices_batch", params=params, timeout=300_000)
+        except Exception as exc:
+            raise GraphUnavailable(f"query ty_devices_batch failed: {_why(exc)}") from exc
+        blocks = {k: v for b in res for k, v in b.items()}
+        rows = sorted((_txn({a.split(".", 1)[-1]: x for a, x in v["attributes"].items()}) for v in blocks.get("W", [])),
+                      key=lambda t: (t.ts, t.txn_id))
+        counts = blocks.get("n_cards", {}) or {}
+        if self.recorder:
+            self.recorder("ty_devices_batch", {**params, "ds": keys}, rows)
+        self._batch = {"since": since, "until": until, "keys": set(keys), "counts": counts or {},
+                       "cards": {k: set(v) for k, v in (blocks.get("cards") or {}).items()},
+                       "txns": {k: [t for t in rows if t.device_key == k] for k in keys}}
+
+    def _from_batch(self, device_key: str, since: datetime, until: datetime):
+        b = getattr(self, "_batch", None)
+        if b and device_key in b["keys"] and until == b["until"] and since >= b["since"]:
+            return [t for t in b["txns"][device_key] if t.ts >= since]
+        return None
+
     @lru_cache(maxsize=2048)
     def txns_by_device(self, device_key: str, since: datetime, until: datetime) -> list[Txn]:
+        hit = self._from_batch(device_key, since, until)
+        if hit is not None:
+            return hit
         return self._txns("ty_device_txns", {"d_in": (device_key,), "since": self._t(since), "until": self._t(until)})
 
     @lru_cache(maxsize=2048)
@@ -143,6 +174,9 @@ class TigerGraphTxnSource:
 
     @lru_cache(maxsize=4096)
     def device_card_count(self, device_key: str, until: datetime) -> int:
+        b = getattr(self, "_batch", None)
+        if b and device_key in b["keys"] and until == b["until"] and device_key in b["counts"]:
+            return int(b["counts"][device_key])
         return len({t.card_id for t in self.txns_by_device(device_key, self.data_start, until)})
 
     def txn(self, txn_id: int) -> Txn | None:
@@ -228,9 +262,14 @@ class TigerGraphTxnSource:
     def linked_closed_cases(self, card_id: str, devices: list[str], recipients: list[str],
                             before: datetime, limit: int = 8) -> list[dict]:
         via: dict[str, str] = {card_id: "same card"}
+        b = getattr(self, "_batch", None)
         for dk in devices:
-            for t in self.txns_by_device(dk, self.data_start, before):
-                via.setdefault(t.card_id, f"device {dk}")
+            if b and dk in b["keys"] and b["until"] == before and dk in b["cards"]:
+                cards = b["cards"][dk]  # from the case's batched read: every card before as-of
+            else:
+                cards = {t.card_id for t in self.txns_by_device(dk, self.data_start, before)}
+            for c in sorted(cards):
+                via.setdefault(c, f"device {dk}")
         for r in recipients:
             for t in self.txns_by_recipient(r, self.data_start, before):
                 via.setdefault(t.card_id, f"recipient {r}")
