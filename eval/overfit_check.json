@@ -8,8 +8,8 @@
  },
  "cleared": {
   "n": 300,
-  "uncertain": 156,
-  "legitimate": 138,
+  "uncertain": 178,
+  "legitimate": 116,
   "fraud": 6,
   "innocent_called_fraud": 0.02
  },
@@ -29,8 +29,8 @@
   },
   "escalation / dormant": {
    "expect": "fraud",
-   "legitimate": 1,
-   "fraud": 7
+   "fraud": 7,
+   "legitimate": 1
   },
   "micro charges": {
    "expect": "fraud",

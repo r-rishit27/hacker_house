@@ -108,3 +108,21 @@ Rebuilt on the Savanna workspace from `data/staging_r2` (July 2016 – January 2
 `python scripts/stage_january.py` then `STAGING_DIR=data/staging_r2 python
 scripts/load_to_tigergraph.py`. Verification passes on every vertex and edge type:
 650,938 transactions, 636,621 NEXT edges, 5,585 closed cases, 156,314 device edges.
+
+## 6. A graph algorithm in the decision path
+
+`ty_proxy_components` (graph/queries/sentinel_queries_v3.gsql) runs label propagation
+inside TigerGraph over cards and device profiles joined by anonymous-proxy online
+transactions in a 45-day window; profiles on more than 60 cards bank-wide may not link
+cards. It takes 0.4–0.6 s.
+
+- Against the bank's labelled rings, as of the case's own open date: CC-2649 — 20 of 24
+  ring cards found, 0 outside the ring; CC-5579 (HHG-014) — 20 of 28, 0 outside. The
+  cards not found joined the ring after the case was opened.
+- January 2017: the Round 1 ring device `D2c2006f554c8` returns, behind an anonymous
+  proxy, to 8 cards — most of them its earlier victims. The shared-device detector stays
+  silent (the device is not new to those cards). A new detector, *ring device returns*,
+  fires on all 8 when a specific profile (≤ 60 cards) carries confirmed fraud on ≥ 3 cards
+  and ≥ 30% of the cards that used it — counting the connected cards the bank recorded on
+  the ring's cases. The component names the 7 sibling cards. Held-out cleared alerts called
+  fraud: unchanged at 2.0%.

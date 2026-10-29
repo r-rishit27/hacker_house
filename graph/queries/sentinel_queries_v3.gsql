@@ -75,3 +75,55 @@ CREATE OR REPLACE QUERY ty_card_prior_cases(VERTEX<Card> c_in, DATETIME before)
   F = SELECT f FROM S:c -(CARD_IN_CASE)-> FraudCase:f WHERE f.created_at < before;
   PRINT F[F.case_id, F.card_id, F.created_at, F.verdict, F.pattern, F.exposure_usd];
 }
+
+// Connected components of the anonymous-proxy card–device graph (label propagation).
+// Cards and device profiles are joined through online transactions made behind an
+// anonymous proxy inside [since, until). Each card starts with its own id as label;
+// labels flow card -> transaction -> device -> transaction -> card, keeping the
+// minimum, for max_iter rounds. Cards sharing a label are one ring candidate.
+// Restricting to proxied traffic is what keeps components meaningful: over all
+// devices, two hops already join most of the graph (exploration/rings.md).
+CREATE OR REPLACE QUERY ty_proxy_components(DATETIME since, DATETIME until, INT max_device_cards, INT max_iter)
+  FOR GRAPH @GRAPHNAME@ SYNTAX v1 {
+  MinAccum<STRING> @cc;
+  OrAccum @inwin;
+  MapAccum<STRING, SetAccum<STRING>> @@cards;
+  MapAccum<STRING, SetAccum<STRING>> @@devices;
+  MapAccum<STRING, SumAccum<DOUBLE>> @@amount;
+  INT i = 0;
+  S = {Transaction.*};
+  T = SELECT t FROM S:t
+      WHERE t.ts >= since AND t.ts < until AND t.channel == "online" AND t.proxy_flag == "IP_PROXY:ANONYMOUS"
+      POST-ACCUM t.@inwin = TRUE, t.@cc = "~";
+  Cards = SELECT c FROM T:t -(MADE_BY)-> Card:c POST-ACCUM c.@cc = c.card_id;
+  // A profile on many cards bank-wide is a browser default, not a fingerprint: it may not link cards.
+  Devs = SELECT d FROM T:t -(FROM_DEVICE)-> DeviceProfile:d WHERE d.n_cards <= max_device_cards POST-ACCUM d.@cc = "~";
+  WHILE i < max_iter DO
+    Xa = SELECT t FROM Cards:c -(MADE)-> Transaction:t WHERE t.@inwin ACCUM t.@cc += c.@cc;
+    Xb = SELECT d FROM T:t -(FROM_DEVICE)-> DeviceProfile:d WHERE d.n_cards <= max_device_cards ACCUM d.@cc += t.@cc;
+    Xc = SELECT t FROM Devs:d -(DEVICE_USED_BY)-> Transaction:t WHERE t.@inwin ACCUM t.@cc += d.@cc;
+    Xd = SELECT c FROM T:t -(MADE_BY)-> Card:c ACCUM c.@cc += t.@cc;
+    i = i + 1;
+  END;
+  Ye = SELECT c FROM Cards:c POST-ACCUM @@cards += (c.@cc -> c.card_id);
+  Yf = SELECT d FROM Devs:d POST-ACCUM @@devices += (d.@cc -> d.device_key);
+  Yg = SELECT t FROM T:t POST-ACCUM @@amount += (t.@cc -> t.amt);
+  PRINT @@cards AS cards, @@devices AS devices, @@amount AS amount;
+}
+
+// How many cards used a device before as-of, and how many of them the bank tied to
+// confirmed fraud through it: the card of a confirmed case whose transactions used the
+// device, or a card that case named as connected (rings are recorded that way).
+CREATE OR REPLACE QUERY ty_device_fraud_history(VERTEX<DeviceProfile> d_in, DATETIME before)
+  FOR GRAPH @GRAPHNAME@ SYNTAX v1 {
+  SetAccum<STRING> @@cards;
+  SetAccum<STRING> @@tied;
+  S = {d_in};
+  T = SELECT t FROM S:d -(DEVICE_USED_BY)-> Transaction:t WHERE t.ts < before ACCUM @@cards += t.card_id;
+  C = SELECT cc FROM T:t -(TXN_IN_CC)-> ClosedCase:cc
+      WHERE cc.outcome == "confirmed_fraud" AND cc.closed_at < before ACCUM @@tied += cc.card_id;
+  K = SELECT k FROM C:cc -(CC_CONNECTED_TO)-> Card:k ACCUM @@tied += k.card_id;
+  SetAccum<STRING> @@both;
+  @@both = @@cards INTERSECT @@tied;
+  PRINT @@cards.size() AS n_cards, @@both.size() AS n_fraud_cards;
+}

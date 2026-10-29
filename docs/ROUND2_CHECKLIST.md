@@ -56,7 +56,7 @@ Brief: https://hhgoa-tg-round2.vercel.app/ · ✅ done and verified · ➖ parti
 | Answer quality (15) | ✅ / ⏳ | Round 1 live: 16 correct, 0 innocents blocked; hidden pack pending |
 | Evidence and policy behaviour (10) | ✅ | initial vs final actions with the evidence request that changed them |
 | TigerGraph: vector search in decisions, fused with traversal | ✅ | `sentinel/typologies/vector.py` |
-| TigerGraph: a graph algorithm that affects output | ➖ | traversal-based detectors; no packaged graph algorithm in the decision path yet |
+| TigerGraph: a graph algorithm that affects output | ✅ | `ty_proxy_components`: connected components (label propagation) over the anonymous-proxy card–device graph, run in TigerGraph; names a ring's cards across devices in the device-ring and ring-device-returns detectors, which flows into connected cards, containment and the report. 100% precision against the bank's labelled rings (CC-2649, CC-5579) |
 | TigerGraph: case write-back and read-back | ✅ | `writeback.py`; 20/20 read back |
 | TigerGraph: restricted MCP tools | ➖ | Round 1 MCP setup (`scripts/setup_mcp.py`); the Round 2 layer calls installed queries directly |
 | TigerGraph: graph as source of truth, live run | ✅ | default source; `eval/graph_parity.py` 20/20 identical |
@@ -67,7 +67,7 @@ Brief: https://hhgoa-tg-round2.vercel.app/ · ✅ done and verified · ➖ parti
 
 | # | challenge | status |
 |---|---|---|
-| 1 | New typologies | ✅ six detectors, backtested |
+| 1 | New typologies | ✅ seven detectors, backtested, incl. a known ring device returning to earlier victims (Jan 2017: 8/8 cards) |
 | 4 | Evidence to SAR | ➖ filings with ids per sentence; no per-sentence citation links |
 | 6 | Regulator's view | ✅ Examiner Register, walkthrough, in-browser chain check |
 | 7 | Containment planner | ✅ beats block-all on every ring tested |

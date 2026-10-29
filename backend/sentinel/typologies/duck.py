@@ -137,6 +137,24 @@ class DuckTxnSource:
         keys = ("case_id", "card_id", "opened_at", "outcome", "pattern", "exposure_usd")
         return [dict(zip(keys, r)) for r in rows][-8:]
 
+    @lru_cache(maxsize=4096)
+    def device_fraud_history(self, device_key: str, before: datetime) -> dict:
+        """How many cards used this device before as-of, and how many of them the bank tied
+        to confirmed fraud through it: the card of a confirmed case whose transactions used
+        the device, or a card that case named as connected (that is how rings are recorded)."""
+        self.calls += 1
+        n_cards, n_fraud = self.con.execute(
+            """WITH dev AS (SELECT DISTINCT card_id FROM txn WHERE device_key = ? AND ts < ?),
+                    cases AS (SELECT DISTINCT c.case_id, c.card_id FROM closed_cases c
+                              JOIN cc_txn x ON x.case_id = c.case_id JOIN txn t ON t.txn_id = x.txn_id
+                              WHERE t.device_key = ? AND c.outcome = 'confirmed_fraud'
+                                AND CAST(c.closed_at AS TIMESTAMP) < ?),
+                    tied AS (SELECT card_id FROM cases UNION
+                             SELECT k.card_id FROM cc_conn k JOIN cases USING (case_id))
+               SELECT (SELECT count(*) FROM dev), (SELECT count(*) FROM dev WHERE card_id IN (SELECT card_id FROM tied))""",
+            [device_key, before, device_key, before]).fetchone()
+        return {"n_cards": n_cards, "n_fraud_cards": n_fraud}
+
     def txn(self, txn_id: int) -> Txn | None:
         r = self._rows("txn_id = ?", [txn_id])
         return r[0] if r else None

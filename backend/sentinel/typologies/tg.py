@@ -153,6 +153,49 @@ class TigerGraphTxnSource:
             raise GraphUnavailable(f"txn lookup failed: {exc}") from exc
         return _txn(rows[0]["attributes"]) if rows else None
 
+    # -- graph algorithm --------------------------------------------------------
+    #: A device on more cards than this bank-wide may not link cards in a component.
+    COMPONENT_MAX_DEVICE_CARDS = 60
+    COMPONENT_WINDOW_DAYS = 45
+
+    @lru_cache(maxsize=256)
+    def _components(self, since: str, until: str) -> dict:
+        rows = self._raw_print("ty_proxy_components", {"since": since, "until": until,
+                                                         "max_device_cards": self.COMPONENT_MAX_DEVICE_CARDS,
+                                                         "max_iter": 6})
+        return rows
+
+    def proxy_component(self, card: str, as_of: datetime) -> dict:
+        """The connected component (label propagation in TigerGraph) of the anonymous-proxy
+        card-device graph that contains this card, over the 45 days before as-of."""
+        from datetime import timedelta
+
+        until = as_of.replace(minute=0, second=0, microsecond=0)  # hour buckets, so cases share the cache
+        r = self._components(self._t(until - timedelta(days=self.COMPONENT_WINDOW_DAYS)), self._t(until))
+        for label, cards in r.get("cards", {}).items():
+            if card in cards:
+                return {"cards": sorted(cards), "devices": sorted(r.get("devices", {}).get(label, [])),
+                        "amount": round(r.get("amount", {}).get(label, 0.0), 2)}
+        return {"cards": [], "devices": [], "amount": 0.0}
+
+    @lru_cache(maxsize=4096)
+    def device_fraud_history(self, device_key: str, before: datetime) -> dict:
+        r = self._raw_print("ty_device_fraud_history", {"d_in": (device_key,), "before": self._t(before)})
+        return {"n_cards": int(r.get("n_cards", 0)), "n_fraud_cards": int(r.get("n_fraud_cards", 0))}
+
+    def _raw_print(self, name: str, params: dict) -> dict:
+        """A query whose PRINT is a set of named maps rather than vertex sets."""
+        self.calls += 1
+        try:
+            res = self.conn.runInstalledQuery(name, params=params, timeout=300_000)
+        except Exception as exc:
+            raise GraphUnavailable(f"query {name} failed: {_why(exc)}") from exc
+        out = {k: v for block in res for k, v in block.items()}
+        if self.recorder:
+            rows = [{"component": k, "n_cards": len(v)} for k, v in out.get("cards", {}).items()] or [out]
+            self.recorder(name, params, rows)
+        return out
+
     # -- precedent ------------------------------------------------------------
     def prior_cases(self, card: str, before: datetime) -> list[dict]:
         """The bank's closed cases on the card, then Sentinel's own written-back cases.

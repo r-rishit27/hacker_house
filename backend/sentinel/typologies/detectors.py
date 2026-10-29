@@ -165,6 +165,11 @@ def device_ring(card: str, txns: Sequence[Txn], src: TxnSource, as_of: datetime)
         if proxy_share < 0.5:
             continue
         proxied = sum(t.anon_proxy for t in on_card)
+        # On the graph, extend the ring across devices with the connected component the
+        # card sits in (label propagation over proxied card-device links, run in TigerGraph).
+        comp = src.proxy_component(card, as_of) if hasattr(src, "proxy_component") else {"cards": [], "devices": []}
+        component = sorted(set(comp["cards"]) - {card})
+        members = sorted(set(joined) | set(component))
         hit = TypologyHit(
             key="shared_device_ring",
             pattern="undocumented",
@@ -172,12 +177,17 @@ def device_ring(card: str, txns: Sequence[Txn], src: TxnSource, as_of: datetime)
                 f"Device profile {dk}, never seen on this account before {first:%Y-%m-%d}, made "
                 f"{len(on_card)} online purchase(s) here; {len(joined)} other cards began using the same profile "
                 f"within 30 days, and {proxy_share:.0%} of its uses in that window were behind an anonymous proxy."
+                + (f" Connected components over proxied card-device links put this card in a ring of "
+                   f"{len(comp['cards'])} cards across {len(comp['devices'])} device profile(s)."
+                   if len(comp["cards"]) >= 3 else "")
             ),
             txn_ids=_ids(on_card),
-            connected_card_ids=tuple(joined),
+            connected_card_ids=tuple(members),
             shared=dk,
             strength=0.95 if proxied else 0.75,
-            evidence={"device_key": dk, "n_joined": len(joined), "proxy_share": round(proxy_share, 3)},
+            evidence={"device_key": dk, "n_joined": len(joined), "proxy_share": round(proxy_share, 3),
+                      "component_cards": len(comp["cards"]), "component_devices": comp["devices"][:10],
+                      "added_by_component": sorted(set(component) - set(joined))[:20]},
         )
         if best is None or len(hit.connected_card_ids) > len(best.connected_card_ids):
             best = hit
@@ -388,6 +398,52 @@ def card_testing(card: str, txns: Sequence[Txn], src: TxnSource, as_of: datetime
     return None
 
 
+# ---------------------------------------------------------------------------
+# 8. A known ring device returns
+# ---------------------------------------------------------------------------
+
+#: The device must already carry confirmed fraud on at least this many cards, on
+#: at least this share of the cards that ever used it, and be specific (few cards).
+RING_DEVICE_MIN_FRAUD_CARDS = 3
+RING_DEVICE_MIN_FRAUD_SHARE = 0.3
+#: Same cap as the components query: above it a profile is a browser default.
+RING_DEVICE_MAX_CARDS = 60
+
+
+def ring_device_returns(card: str, txns: Sequence[Txn], src: TxnSource, as_of: datetime) -> TypologyHit | None:
+    """An anonymous-proxy purchase from a device profile the bank has already confirmed
+    as a fraud instrument on several cards. The shared-device detector misses this when
+    the device is not new to the card — which is exactly what happens when a ring comes
+    back to cards it compromised before (January 2017: D2c2006f554c8 on 8 cards, most of
+    them earlier victims)."""
+    if not hasattr(src, "device_fraud_history"):
+        return None
+    ep = [t for t in _episode(txns, as_of) if t.online and t.anon_proxy and t.device_key]
+    for dk in sorted({t.device_key for t in ep}):
+        h = src.device_fraud_history(dk, as_of)
+        if not (h["n_cards"] <= RING_DEVICE_MAX_CARDS and h["n_fraud_cards"] >= RING_DEVICE_MIN_FRAUD_CARDS
+                and h["n_fraud_cards"] >= RING_DEVICE_MIN_FRAUD_SHARE * h["n_cards"]):
+            continue
+        on_card = [t for t in ep if t.device_key == dk]
+        comp = src.proxy_component(card, as_of) if hasattr(src, "proxy_component") else {"cards": [], "devices": []}
+        members = sorted(set(comp["cards"]) - {card})
+        return TypologyHit(
+            key="ring_device_returns",
+            pattern="undocumented",
+            description=(
+                f"{len(on_card)} purchase(s) behind an anonymous proxy from device profile {dk}, which the bank has "
+                f"already confirmed as a fraud instrument on {h['n_fraud_cards']} of the {h['n_cards']} cards that "
+                f"used it" + (f"; connected components over proxied card-device links tie this card to "
+                              f"{len(members)} other card(s) in the same window" if members else "") + "."),
+            txn_ids=_ids(on_card),
+            connected_card_ids=tuple(members),
+            shared=dk,
+            strength=0.9,
+            evidence={"device_key": dk, **h, "component_devices": comp["devices"][:10]},
+        )
+    return None
+
+
 Detector = Callable[[str, Sequence[Txn], TxnSource, datetime], TypologyHit | None]
 
 DETECTORS: dict[str, Detector] = {
@@ -398,6 +454,7 @@ DETECTORS: dict[str, Detector] = {
     "micro_charges": micro_charges,
     "recipient_concentration": recipient_concentration,
     "card_testing": card_testing,
+    "ring_device_returns": ring_device_returns,
 }
 
 
