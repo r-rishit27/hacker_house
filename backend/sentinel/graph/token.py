@@ -80,23 +80,29 @@ class TokenManager:
         if not secret:
             raise GraphUnavailable("TG_SECRET is empty; no bearer token can be minted")
 
-        # The secret is graph-scoped on this workspace, so the graph name is not
-        # part of the request body — mirroring what pyTigerGraph's getToken(secret)
-        # sends, which is what the Savanna deployment actually accepts.
-        body: dict[str, Any] = {"secret": secret}
-        if self._lifetime_s is not None:
-            body["lifetime"] = self._lifetime_s
-
-        url = f"{self._settings.restpp_base}/requesttoken"
-        try:
-            response = await self._http.post(
-                url, json=body, timeout=self._settings.tg_query_timeout_s
-            )
-        except httpx.TransportError as exc:
-            raise GraphUnavailable(f"could not reach {url}: {exc}", url=url) from exc
-
-        if is_cold_start(response.text):
-            raise GraphColdStart("the workspace is waking; token not minted yet", url=url)
+        # TigerGraph 4.x (Savanna today) mints at /gsql/v1/tokens and wants the graph
+        # name; 3.x workspaces mint at /restpp/requesttoken from a graph-scoped secret.
+        # Try the 4.x endpoint first and fall back, so either generation works.
+        attempts: list[tuple[str, dict[str, Any]]] = [
+            (f"{self._settings.tg_host}/gsql/v1/tokens", {"secret": secret, "graph": self._settings.tg_graph}),
+            (f"{self._settings.restpp_base}/requesttoken", {"secret": secret}),
+        ]
+        response: httpx.Response | None = None
+        url = ""
+        for url, body in attempts:
+            if self._lifetime_s is not None:
+                body["lifetime"] = self._lifetime_s
+            try:
+                response = await self._http.post(
+                    url, json=body, timeout=self._settings.tg_query_timeout_s
+                )
+            except httpx.TransportError as exc:
+                raise GraphUnavailable(f"could not reach {url}: {exc}", url=url) from exc
+            if is_cold_start(response.text):
+                raise GraphColdStart("the workspace is waking; token not minted yet", url=url)
+            if response.headers.get("content-type", "").startswith("application/json"):
+                break  # this endpoint speaks the protocol; its answer, good or bad, is the one to read
+        assert response is not None
 
         payload = self._payload(response, url)
         token, expiry = self._read_token(payload, url)
@@ -142,6 +148,10 @@ class TokenManager:
         if isinstance(expiry, str):
             try:
                 return dt.datetime.fromisoformat(expiry).astimezone(dt.UTC)
+            except ValueError:
+                pass
+            try:  # TigerGraph 4.x: "Fri Nov 06 05:26:51 UTC 2026"
+                return dt.datetime.strptime(expiry, "%a %b %d %H:%M:%S UTC %Y").replace(tzinfo=dt.UTC)
             except ValueError:
                 return None
         return None

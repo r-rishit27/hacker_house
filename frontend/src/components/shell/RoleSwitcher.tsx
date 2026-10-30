@@ -34,6 +34,13 @@ export function RoleSwitcher() {
   if (!user) return <span className="text-caption text-fg-subtle">Checking sign-in…</span>;
   return (
     <div className="flex items-center gap-2">
+      {user.role === "fraud_manager" && (
+        // The examiner's view of the same record: audit chain, approval chain, change record.
+        <a href="/regulator"
+          className="h-8 whitespace-nowrap rounded-md border border-border-strong bg-surface-2 px-2.5 text-[11px] font-semibold leading-8 text-fg hover:bg-accent-tint">
+          Regulator overview
+        </a>
+      )}
       <span className="font-mono text-mono-sm text-fg">{user.id}</span>
       <span className={`rounded-full border px-2 py-px text-caption font-semibold ${ROLE_TONE[user.role] ?? ROLE_TONE.analyst}`}>
         {ROLE_LABELS[user.role] ?? user.role}

@@ -48,3 +48,7 @@ data/*.log
 eval/out/
 eval/*.log
 updated_dataset/
+
+# run.sh: service logs and the exported snapshot
+.run/
+regulator_snapshot.html

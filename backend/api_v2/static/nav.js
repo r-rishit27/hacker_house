@@ -2,7 +2,7 @@
 // The server enforces every permission; this only decides which links to show.
 window.SentinelNav = (function () {
   const PAGES = [
-    { href: "/portal", label: "Case portal", need: "queue.view" },
+    { href: "/", label: "Console", need: "queue.view" },
     { href: "/portal#approvals", label: "Approvals", need: "approve.L1" },
     { href: "/portal#access", label: "Access & roles", need: "users.view" },
     { href: "/regulator", label: "Regulator overview", need: "regulator.view" },
