@@ -1,94 +1,193 @@
 {
   "case_id": "HHG-003",
   "case": {
-    "status": "escalated",
+    "status": "open",
     "verdict": "uncertain",
-    "fraud_probability": 0.32,
+    "fraud_probability": 0.42,
     "pattern": "none",
     "pattern_description": "",
-    "affected_txn_ids": ["3530164"],
+    "affected_txn_ids": [
+      "3530164"
+    ],
     "first_suspicious_txn_id": "3530164",
     "connected_card_ids": [],
     "connected_device_profiles": [],
     "exposure_usd": 49.0,
     "evidence": [
       {
-        "claim": "The disputed charge is a $49.00 card-present purchase (ProductCD W) on 2016-12-10 13:01:21 in billing region 330.0, country 87, with a model risk score of 0.40. Being product W it carries no identity record, so no device or proxy evidence exists for it.",
+        "claim": "The bank's model scored this transaction 0.40, in its second band.",
         "source": "graph",
         "ref": "query:txn_detail(txn_id=3530164)",
-        "entity_ids": ["3530164", "C08623-K2", "330.0"]
+        "entity_ids": [
+          "3530164"
+        ]
       },
       {
-        "claim": "Billing region 330.0 is long established for this card, not novel: 42 prior transactions there before the disputed charge, the first on 2016-07-09, and 5 more in the same week (2016-12-07 x4, 2016-12-09). The card had 980 transactions before this one across 54 regions.",
-        "source": "graph",
-        "ref": "query:region_novelty(card_id=C08623-K2, addr1=330.0, before=2016-12-10 13:01:21)",
-        "entity_ids": ["C08623-K2", "330.0"]
-      },
-      {
-        "claim": "The amount is unremarkable for this card: 53 prior charges between $48.50 and $49.50, against a median transaction of $68.01 and a p95 of $425.66. The disputed charge is below the cardholder's median.",
-        "source": "graph",
-        "ref": "query:card_baseline(card_id=C08623-K2)",
-        "entity_ids": ["C08623-K2"]
-      },
-      {
-        "claim": "The channel and product are the cardholder's norm: 1,080 of 1,134 transactions on this card are in person, and 34 of the 42 prior transactions in region 330.0 are the same product code W.",
-        "source": "graph",
-        "ref": "query:card_baseline(card_id=C08623-K2)",
-        "entity_ids": ["C08623-K2"]
-      },
-      {
-        "claim": "Transaction 3530056, a $116.93 card-present purchase in the same region 330.0 49 minutes earlier at 12:12:41, scored 0.88 and is the highest-risk transaction on this card in the alert week. If the disputed charge is fraud, this is very likely part of the same episode.",
-        "source": "graph",
-        "ref": "query:card_window(card_id=C08623-K2, center=2016-12-10 13:01:21, hours=72)",
-        "entity_ids": ["3530056", "3530164"]
-      },
-      {
-        "claim": "This cardholder has reported unrecognized activity five times and been right every time: CC-2817, CC-2935, CC-3327, CC-3682 and CC-4957 were all closed as confirmed fraud on this same card. A denial from this customer carries an unusually strong track record.",
-        "source": "graph",
-        "ref": "query:prior_cases_structural(customer_id=C08623)",
-        "entity_ids": ["CC-2817", "CC-2935", "CC-3327", "CC-3682", "CC-4957", "C08623-K2"]
-      },
-      {
-        "claim": "The disputed charge does not match this card's own fraud signature. All four prior out_of_region_use cases involved card-present use in billing regions the card had no history in (126.0, 387.0, 158.0, 272.0) while the cardholder retained the card; region 330.0 has five months of history. The fifth case, CC-3327, was mixed-channel account takeover, which also does not fit a single in-person charge.",
-        "source": "graph",
-        "ref": "query:prior_cases_structural(customer_id=C08623)",
-        "entity_ids": ["CC-2817", "CC-2935", "CC-3682", "CC-4957", "CC-3327"]
-      },
-      {
-        "claim": "No shared-origin evidence. Billing region 330.0 shows 18 transactions scoring 0.70 or above out of 608 across 2016-12-08 to 2016-12-12, against 13 of 552 in the same five-day window a month earlier. That is no spike, and the 15 other cards involved show no common device or timing structure, so policy R6 and R9 do not apply.",
-        "source": "graph",
-        "ref": "query:region_cluster(addr1=330.0, from=2016-12-08, to=2016-12-12)",
-        "entity_ids": ["330.0"]
-      },
-      {
-        "claim": "The bank's own model is not alarmed: the disputed transaction scored 0.40, below the 0.70 band, while the adjacent 12:12:41 charge scored 0.88. The score is treated here as one input among several, not as a verdict.",
+        "claim": "The purchase was card-present, so the card itself was used.",
         "source": "graph",
         "ref": "query:txn_detail(txn_id=3530164)",
-        "entity_ids": ["3530164", "3530056"]
+        "entity_ids": [
+          "3530164"
+        ]
       },
       {
-        "claim": "Cardholder C08623 reported on 2016-12-10 15:01:21, two hours after the charge: 'I never made this $49.00 purchase. Please check my card.'",
-        "source": "customer",
-        "ref": "alert:HHG-003",
-        "entity_ids": ["C08623", "3530164"]
+        "claim": "The amount is $49.00, under the $500 band.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3530164)",
+        "entity_ids": [
+          "3530164"
+        ]
       },
       {
-        "claim": "Asked whether they were in billing region 330.0 on 2016-12-10 and whether they recognised the $116.93 charge 49 minutes earlier, the cardholder confirmed both: they were in the area and made the larger purchase, but still do not recognise the $49.00 charge.",
-        "source": "customer",
-        "ref": "evidence_request:1",
-        "entity_ids": ["3530056", "3530164"]
+        "claim": "The amount is $49.00, not the sub-$5 size a probe authorisation uses.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3530164)",
+        "entity_ids": [
+          "3530164"
+        ]
+      },
+      {
+        "claim": "The billing country is the cardholder's home country.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3530164)",
+        "entity_ids": [
+          "3530164"
+        ]
+      },
+      {
+        "claim": "At least one of the card's unnamed match flags (M1-M9) is false.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3530164)",
+        "entity_ids": [
+          "3530164"
+        ]
+      },
+      {
+        "claim": "The transaction carries a distance value.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3530164)",
+        "entity_ids": [
+          "3530164"
+        ]
+      },
+      {
+        "claim": "The transaction's distance value is 9, a small one.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3530164)",
+        "entity_ids": [
+          "3530164"
+        ]
+      },
+      {
+        "claim": "The card has prior history.",
+        "source": "graph",
+        "ref": "query:region_novelty(card_id=C08623-K2, region=330.0, as_of=2016-12-10 13:01:21)",
+        "entity_ids": [
+          "C08623-K2",
+          "330.0"
+        ]
+      },
+      {
+        "claim": "The card had 42 prior transactions in billing region 330.0.",
+        "source": "graph",
+        "ref": "query:region_novelty(card_id=C08623-K2, region=330.0, as_of=2016-12-10 13:01:21)",
+        "entity_ids": [
+          "C08623-K2",
+          "330.0"
+        ]
+      },
+      {
+        "claim": "Billing region 330.0 is well established for this card (42 prior transactions, first seen 2016-07-09 23:53:35).",
+        "source": "graph",
+        "ref": "query:region_novelty(card_id=C08623-K2, region=330.0, as_of=2016-12-10 13:01:21)",
+        "entity_ids": [
+          "C08623-K2",
+          "330.0"
+        ]
+      },
+      {
+        "claim": "The card was used in person in 10 transaction(s) in a different billing region within a day of this one.",
+        "source": "graph",
+        "ref": "query:region_novelty(card_id=C08623-K2, region=330.0, as_of=2016-12-10 13:01:21)",
+        "entity_ids": [
+          "C08623-K2",
+          "330.0"
+        ]
+      },
+      {
+        "claim": "The previous transaction on this card was 49 minutes earlier.",
+        "source": "graph",
+        "ref": "query:txn_sequence_context(txn_id=3530164)",
+        "entity_ids": [
+          "3530164"
+        ]
+      },
+      {
+        "claim": "The previous transaction was more than ten minutes earlier.",
+        "source": "graph",
+        "ref": "query:txn_sequence_context(txn_id=3530164)",
+        "entity_ids": [
+          "3530164"
+        ]
+      },
+      {
+        "claim": "53 prior charges on this card fall within $0.50 of $49.00.",
+        "source": "graph",
+        "ref": "query:amount_band_probe(card_id=C08623-K2, amt=49.0, tol=0.5, as_of=2016-12-10 13:01:21)",
+        "entity_ids": [
+          "C08623-K2"
+        ]
+      },
+      {
+        "claim": "$49.00 is below this card's own prior mean of $128.84.",
+        "source": "graph",
+        "ref": "query:amount_band_probe(card_id=C08623-K2, amt=49.0, tol=0.5, as_of=2016-12-10 13:01:21)",
+        "entity_ids": [
+          "C08623-K2"
+        ]
+      },
+      {
+        "claim": "$49.00 is within two standard deviations of this card's prior mean ($452.81).",
+        "source": "graph",
+        "ref": "query:amount_band_probe(card_id=C08623-K2, amt=49.0, tol=0.5, as_of=2016-12-10 13:01:21)",
+        "entity_ids": [
+          "C08623-K2"
+        ]
+      },
+      {
+        "claim": "Fraud Policy R7. Disputed but legitimate — applied here because cardholder disputes a charge that matches their own recurring pattern",
+        "source": "document",
+        "ref": "doc:POL-R7#R7",
+        "entity_ids": [
+          "POL-R7"
+        ]
+      },
+      {
+        "claim": "Fraud Policy §3a. A case is not a report — applied here because 3a: no report. fraud is neither confirmed nor strongly suspected (probability 0.42); exposure $49.00 is at or below $1,000; the activity connects to no shared device profile, region cluster or other customer's fraud.",
+        "source": "document",
+        "ref": "doc:POL-3A#3a",
+        "entity_ids": [
+          "POL-3A"
+        ]
       }
     ],
-    "similar_prior_cases": ["CC-1589", "CC-4957", "CC-2817", "CC-2935", "CC-3682", "CC-3327"],
-    "summary": "Cardholder C08623 disputes a $49.00 card-present purchase in billing region 330.0. On the graph evidence the charge is unremarkable for this card: the region carries 42 prior transactions going back to July, 53 earlier charges sit in the same dollar band, the amount is below the cardholder's median, and the product and channel are their norm. Against that, this cardholder has denied activity five times before and been correct five times, all on this same card, and a $116.93 charge 49 minutes earlier in the same region scored 0.88. The two signals conflict, so the case was not closed on the graph alone. Verification placed the cardholder in region 330.0 that day and confirmed the larger adjacent charge as theirs, which removed the strongest fraud indicator and dropped assessed probability from 0.55 to 0.32; the cardholder nonetheless maintains the dispute. No block is recommended at any stage: the charge matches the cardholder's own established pattern (R7) and there is no shared device, region cluster or connected card to justify one.",
+    "similar_prior_cases": [
+      "CC-2935",
+      "CC-4323",
+      "CC-3959",
+      "CC-4957",
+      "CC-0349",
+      "CC-3327"
+    ],
+    "summary": "The evidence does not show a fraud pattern that fits the listed categories. This is a card-present $49.00 purchase in the cardholder’s home country, in a billing region with established prior history on the card, and the amount is consistent with prior spending patterns rather than a probe or unusual online use. The customer reported it as unrecognized, but the surrounding facts lean legitimate, including the card being used in person and the prior transaction history in billing region 330.0. The retrieved prior cases show this card has had confirmed out-of-region fraud before, but this transaction itself does not match that pattern.",
     "written_to_graph": true,
     "graph_case_id": "CASE-HHG-003"
   },
   "evidence_requests": [
     {
-      "type": "customer_validation",
-      "asked_after_step": 5,
-      "assumed_response": "Cardholder confirms they were in billing region 330.0 on 2016-12-10 and recognises transaction 3530056 ($116.93 at 12:12:41) as their own purchase, but continues to state they did not make the $49.00 charge at 13:01:21. Assumption basis: the card has 42 prior transactions in region 330.0 including four on 2016-12-07 and one on 2016-12-09, so the cardholder demonstrably frequents the area; a small forgotten charge is the most likely explanation consistent with that history."
+      "type": "analyst_info",
+      "asked_after_step": 7,
+      "assumed_response": "No reply from the customer within 24 hours. The graph supports both readings, so no answer is assumed."
     }
   ],
   "next_best_actions": {
@@ -96,58 +195,48 @@
       {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "3a: a cardholder disputes a charge, so a case is opened regardless of the eventual verdict"
+        "reason": "R7: cardholder disputes a charge that matches their own recurring pattern"
       },
       {
         "action": "VERIFY_WITH_CUSTOMER",
         "route": "auto",
-        "reason": "R1: assessed probability 0.55 is below 0.70 and the signals conflict, so verification comes before any block. The decisive question is whether the cardholder also denies 3530056 ($116.93, risk 0.88) 49 minutes earlier in the same region"
+        "reason": "R7: confirm with the cardholder that this is their own recurring charge"
       },
       {
-        "action": "MONITOR_CARD",
+        "action": "WARN_CUSTOMER",
         "route": "auto",
-        "reason": "R1: the card stays active at raised sensitivity while the verification is outstanding, given four prior confirmed compromises on it"
-      },
-      {
-        "action": "ESCALATE_TO_ANALYST",
-        "route": "auto",
-        "reason": "R8: the evidence conflicts. The charge is unremarkable for this card, but this cardholder's five previous denials were all confirmed fraud"
+        "reason": "R7: send an informational message about the recurring charge"
       }
     ],
     "final": [
       {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "3a: the case remains open on the record with the verification result attached"
+        "reason": "R7: cardholder disputes a charge that matches their own recurring pattern"
+      },
+      {
+        "action": "VERIFY_WITH_CUSTOMER",
+        "route": "auto",
+        "reason": "R7: confirm with the cardholder that this is their own recurring charge"
       },
       {
         "action": "WARN_CUSTOMER",
         "route": "auto",
-        "reason": "R7: the disputed charge matches the cardholder's own established pattern in amount, product, channel and region, so the response is an informational message about recurring and easily forgotten charges, not a block"
-      },
-      {
-        "action": "MONITOR_CARD",
-        "route": "auto",
-        "reason": "R7: card stays active under raised monitoring for 72 hours; four prior confirmed compromises justify the sensitivity even though this charge does not match their signature"
-      },
-      {
-        "action": "ESCALATE_TO_ANALYST",
-        "route": "auto",
-        "reason": "R8: verdict remains uncertain at 0.32 and the cardholder maintains the dispute, so a human decides the reimbursement question"
+        "reason": "R7: send an informational message about the recurring charge"
       }
     ],
-    "what_changed": "The cardholder placed themselves in billing region 330.0 on 2016-12-10 and confirmed the $116.93 charge 49 minutes earlier as their own, which removed the strongest fraud indicator and dropped assessed probability from 0.55 to 0.32. VERIFY_WITH_CUSTOMER is therefore replaced by WARN_CUSTOMER under R7. No block was recommended at either stage: R1 barred it before the evidence came in, and R7 bars it after."
+    "what_changed": "nothing"
   },
   "sar": {
     "file": false,
-    "reason": "3a: no report. Fraud is neither confirmed nor strongly suspected at probability 0.32, exposure of $49.00 is far below the $1,000 threshold, and the activity connects to no shared device profile, no region cluster and no other customer's fraud. Region 330.0 shows 18 of 608 transactions scoring 0.70 or above across the alert window against 13 of 552 a month earlier, which is not a cluster. FILE_REPORT does not appear in the final actions.",
+    "reason": "3a: no report. fraud is neither confirmed nor strongly suspected (probability 0.42); exposure $49.00 is at or below $1,000; the activity connects to no shared device profile, region cluster or other customer's fraud.",
     "narrative": "",
     "subjects": [],
-    "total_amount_usd": 0,
+    "total_amount_usd": 0.0,
     "activity_dates": []
   },
-  "stop_reason": "Policy 6, second condition: the verification response settled the decisive question. The cardholder confirmed their presence in region 330.0 and ownership of the adjacent higher-risk charge, which is the only piece of evidence that could have turned a statistically ordinary purchase into a fraud episode. Probability now sits at 0.32, outside the 0.15/0.85 band, so the case is escalated rather than closed. No further graph evidence would change the action set, because the remaining question is whether the cardholder simply forgot a $49 purchase, and no query can answer that.",
-  "tool_calls": 17,
-  "tokens": 0,
-  "latency_s": 1080.0
+  "stop_reason": "Investigation ended under policy 3a because fraud was neither confirmed nor strongly suspected: probability was 0.42, exposure was $49.00 at or below $1,000, and the activity connected to no shared device profile, region cluster, or other customer's fraud.",
+  "tool_calls": 12,
+  "tokens": 7185,
+  "latency_s": 15.81
 }

@@ -1,0 +1,223 @@
+@import "./tokens.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans), system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 20px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Tabular numerals everywhere a value can change while you are reading it. */
+  .tabular,
+  table,
+  [data-numeric] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background: var(--accent-tint);
+    color: var(--fg);
+  }
+
+  /* Focus is never removed and never replaced by colour alone. */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: var(--radius-full);
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+/* ── motion ──────────────────────────────────────────────────────────────────
+ *
+ * Seven keyframes, ported from the console design study. Each one says
+ * something the layout cannot:
+ *
+ *   s-in     a row that has just arrived from the stream
+ *   s-pop    a graph node that has just entered the subgraph
+ *   s-pulse  a connection that is open, or a state still resolving
+ *   stripe   the agent is working — the only continuous motion on the page
+ *   lock     the investigation's current focus, closing on a node
+ *   trace    an edge being walked, or a boundary being swept
+ *   spin     a scope ring turning over its neighbourhood
+ *
+ * The study's eighth, `prowl`, is not here: nothing in this console has an
+ * indeterminate sweep with no known end, and a keyframe no component uses is
+ * a keyframe the next person will use wrongly.
+ *
+ * They are defined once, here, so a component can never invent an eighth.
+ * Everything below is disabled wholesale under `prefers-reduced-motion`; the
+ * information each one carries is also carried by text or colour, never by
+ * the movement alone.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+@keyframes s-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes s-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes s-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes stripe {
+  to {
+    background-position: 56px 0;
+  }
+}
+
+@keyframes lock {
+  0% {
+    transform: scale(0.72);
+    opacity: 0.85;
+  }
+  70% {
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes trace {
+  to {
+    stroke-dashoffset: -28;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@layer utilities {
+  .animate-s-in {
+    animation: s-in 260ms var(--ease-standard) both;
+  }
+  .animate-s-pop {
+    animation: s-pop 280ms var(--ease-standard) both;
+  }
+  .animate-s-pulse {
+    animation: s-pulse 2.4s ease-in-out infinite;
+  }
+  .animate-trace {
+    animation: trace 1.1s linear infinite;
+  }
+  .animate-spin-slow {
+    animation: spin 14s linear infinite;
+    transform-origin: center;
+    transform-box: fill-box;
+  }
+  .animate-lock {
+    animation: lock 1.7s ease-out infinite;
+    transform-origin: center;
+    transform-box: fill-box;
+  }
+
+  /* The masthead rule. The only thing on the page that never stops moving,
+     which is why it is three pixels tall and behind everything else. */
+  .bg-runway {
+    background-image: repeating-linear-gradient(
+      115deg,
+      var(--accent-bold) 0 7px,
+      transparent 7px 14px,
+      var(--fg) 14px 19px,
+      transparent 19px 28px
+    );
+    background-size: 56px 100%;
+    animation: stripe 7s linear infinite;
+  }
+
+  /* A row the agent is working on right now. Same stripe, a twentieth of the
+     contrast, so a whole column of them does not read as noise. */
+  .bg-working {
+    background-image: repeating-linear-gradient(
+      115deg,
+      color-mix(in srgb, var(--accent-bold) 12%, transparent) 0 8px,
+      transparent 8px 28px
+    );
+    background-size: 56px 100%;
+    animation: stripe 2.6s linear infinite;
+  }
+
+  /* The one place a hatch pattern is defined: a ledger posting clipped by the
+     group cap. See DESIGN_SYSTEM.md §3.4. */
+  .bg-hatch {
+    background-image: repeating-linear-gradient(
+      45deg,
+      currentColor,
+      currentColor 2px,
+      transparent 2px,
+      transparent 4px
+    );
+  }
+
+  /* The ring canvas: paper with a printed grid, so a node has something to
+     sit on and the eye can judge distance. */
+  .bg-dotgrid {
+    background-image: radial-gradient(var(--border) 1px, transparent 1px);
+    background-size: 26px 26px;
+  }
+}
+
+/* Motion is decoration here, never the only carrier of meaning, so it is safe
+   to remove entirely rather than merely shorten. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-s-in,
+  .animate-s-pop,
+  .animate-s-pulse,
+  .animate-trace,
+  .animate-spin-slow,
+  .animate-lock,
+  .bg-runway,
+  .bg-working {
+    animation: none !important;
+  }
+}

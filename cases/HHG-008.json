@@ -1,0 +1,228 @@
+{
+  "case_id": "HHG-008",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.9627,
+    "pattern": "card_not_present_fraud",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3553223",
+      "3554288",
+      "3554589",
+      "3554683",
+      "3555638",
+      "3556719",
+      "3557987",
+      "3558054",
+      "3561904"
+    ],
+    "first_suspicious_txn_id": "3553223",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 435.57,
+    "evidence": [
+      {
+        "claim": "The bank's model scored this transaction 0.38, in its second band.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3558054)",
+        "entity_ids": [
+          "3558054"
+        ]
+      },
+      {
+        "claim": "The purchase was made online, without the card present.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3558054)",
+        "entity_ids": [
+          "3558054"
+        ]
+      },
+      {
+        "claim": "The amount is $55.68, under the $500 band.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3558054)",
+        "entity_ids": [
+          "3558054"
+        ]
+      },
+      {
+        "claim": "The amount is $55.68, not the sub-$5 size a probe authorisation uses.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3558054)",
+        "entity_ids": [
+          "3558054"
+        ]
+      },
+      {
+        "claim": "Every one of the card's unnamed match flags (M1-M9) is true.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3558054)",
+        "entity_ids": [
+          "3558054"
+        ]
+      },
+      {
+        "claim": "The transaction carries no distance value (an unnamed Vesta field).",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3558054)",
+        "entity_ids": [
+          "3558054"
+        ]
+      },
+      {
+        "claim": "The identity record does not mark this device as new for the account.",
+        "source": "graph",
+        "ref": "query:device_novelty(txn_id=3558054)",
+        "entity_ids": [
+          "3558054",
+          "Da8deed7c1a46"
+        ]
+      },
+      {
+        "claim": "The identity record marks this device as previously seen elsewhere.",
+        "source": "graph",
+        "ref": "query:device_novelty(txn_id=3558054)",
+        "entity_ids": [
+          "3558054",
+          "Da8deed7c1a46"
+        ]
+      },
+      {
+        "claim": "No proxy was recorded on the connection.",
+        "source": "graph",
+        "ref": "query:device_novelty(txn_id=3558054)",
+        "entity_ids": [
+          "3558054",
+          "Da8deed7c1a46"
+        ]
+      },
+      {
+        "claim": "This card has used this device 9 time(s) before.",
+        "source": "graph",
+        "ref": "query:device_novelty(txn_id=3558054)",
+        "entity_ids": [
+          "3558054",
+          "Da8deed7c1a46"
+        ]
+      },
+      {
+        "claim": "The previous transaction on this card was 18 minutes earlier.",
+        "source": "graph",
+        "ref": "query:txn_sequence_context(txn_id=3558054)",
+        "entity_ids": [
+          "3558054"
+        ]
+      },
+      {
+        "claim": "The previous transaction was more than ten minutes earlier.",
+        "source": "graph",
+        "ref": "query:txn_sequence_context(txn_id=3558054)",
+        "entity_ids": [
+          "3558054"
+        ]
+      },
+      {
+        "claim": "6 prior charges on this card fall within $0.50 of $55.68.",
+        "source": "graph",
+        "ref": "query:amount_band_probe(card_id=C13171-K2, amt=55.68, tol=0.5, as_of=2016-12-19 22:08:56)",
+        "entity_ids": [
+          "C13171-K2"
+        ]
+      },
+      {
+        "claim": "$55.68 is above this card's prior mean of $54.02.",
+        "source": "graph",
+        "ref": "query:amount_band_probe(card_id=C13171-K2, amt=55.68, tol=0.5, as_of=2016-12-19 22:08:56)",
+        "entity_ids": [
+          "C13171-K2"
+        ]
+      },
+      {
+        "claim": "$55.68 is within two standard deviations of this card's prior mean ($154.33).",
+        "source": "graph",
+        "ref": "query:amount_band_probe(card_id=C13171-K2, amt=55.68, tol=0.5, as_of=2016-12-19 22:08:56)",
+        "entity_ids": [
+          "C13171-K2"
+        ]
+      },
+      {
+        "claim": "Fraud Policy R7. Disputed but legitimate — applied here because cardholder disputes a charge that matches their own recurring pattern",
+        "source": "document",
+        "ref": "doc:POL-R7#R7",
+        "entity_ids": [
+          "POL-R7"
+        ]
+      },
+      {
+        "claim": "Fraud Policy §3a. A case is not a report — applied here because 3a: no report. exposure $435.57 is at or below $1,000; the activity connects to no shared device profile, region cluster or other customer's fraud.",
+        "source": "document",
+        "ref": "doc:POL-3A#3a",
+        "entity_ids": [
+          "POL-3A"
+        ]
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-3728",
+      "CC-1925",
+      "CC-0056",
+      "CC-1715",
+      "CC-4871",
+      "CC-2418"
+    ],
+    "summary": "The evidence shows an online card-not-present purchase that the customer says they did not make, and the transaction is consistent with prior confirmed card-not-present fraud on this card. The device was previously seen on the account and there was no proxy, so this is not the stronger new-device variant, but the transaction still has multiple fraud-leaning signals including all unnamed match flags being true and no distance value. Legitimate indicators are present too, including prior use of this device 9 time(s) before and an amount that is within the card's historical range, so the evidence supports card-not-present fraud rather than a card-testing or account-takeover pattern.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-HHG-008"
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R7: cardholder disputes a charge that matches their own recurring pattern"
+      },
+      {
+        "action": "VERIFY_WITH_CUSTOMER",
+        "route": "auto",
+        "reason": "R7: confirm with the cardholder that this is their own recurring charge"
+      },
+      {
+        "action": "WARN_CUSTOMER",
+        "route": "auto",
+        "reason": "R7: send an informational message about the recurring charge"
+      }
+    ],
+    "final": [
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R7: cardholder disputes a charge that matches their own recurring pattern"
+      },
+      {
+        "action": "VERIFY_WITH_CUSTOMER",
+        "route": "auto",
+        "reason": "R7: confirm with the cardholder that this is their own recurring charge"
+      },
+      {
+        "action": "WARN_CUSTOMER",
+        "route": "auto",
+        "reason": "R7: send an informational message about the recurring charge"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": false,
+    "reason": "3a: no report. exposure $435.57 is at or below $1,000; the activity connects to no shared device profile, region cluster or other customer's fraud.",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0.0,
+    "activity_dates": []
+  },
+  "stop_reason": "Policy 6: probability 0.96 is at or above 0.85 with 5 independent pieces of evidence.",
+  "tool_calls": 11,
+  "tokens": 6669,
+  "latency_s": 15.27
+}

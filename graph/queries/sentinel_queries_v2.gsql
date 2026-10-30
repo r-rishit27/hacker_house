@@ -1,0 +1,265 @@
+// Sentinel v2 additions. Same design rule as sentinel_queries.gsql: these return
+// FACTS, not verdicts. Thresholds live in the policy engine where they are tested.
+//
+// Why each of these exists:
+//   1-3  close the three fitted ELT features that had no tool behind them
+//   4    replaces an interpolated full-scan in sentinel/memory.py
+//   5-7  the read surface the analyst console needs; nothing today lists a case
+//   8    ring discovery as an EDGE LIST, so components are computed client-side
+//   9-10 the GraphRAG corpus: PolicyDoc is 0 rows and ClosedCase.emb is empty
+//
+// Installed by: python scripts/install_queries.py --file queries/sentinel_queries_v2.gsql
+// INSTALL compiles, and compiling is the slow step — the first 16 took 4 minutes.
+// Batch every new query into one pass.
+
+// ------------------------------------------------------------ 1. burst timing
+// 576,425 NEXT edges are loaded and no v1 query traverses them. These are the
+// two fitted velocity features (burst_under_1h, burst_under_10m) that currently
+// have no source. Each transaction has at most one PREV and one NEXT within its
+// card, so the counts below are 0 or 1 and disambiguate a real zero gap from an
+// absent neighbour.
+
+CREATE OR REPLACE QUERY txn_sequence_context(VERTEX<Transaction> t_in)
+  FOR GRAPH GRAPH_GOA SYNTAX v1 {
+  SumAccum<INT> @@n_prev;
+  SumAccum<INT> @@n_next;
+  SumAccum<INT> @@gap_prev;
+  SumAccum<INT> @@gap_next;
+  S = {t_in};
+  P = SELECT p FROM S:t -(PREV:e)- Transaction:p
+      ACCUM @@n_prev += 1, @@gap_prev += e.gap_seconds;
+  N = SELECT n FROM S:t -(NEXT:e2)- Transaction:n
+      ACCUM @@n_next += 1, @@gap_next += e2.gap_seconds;
+  PRINT @@n_prev AS has_prev,
+        @@n_next AS has_next,
+        @@gap_prev AS seconds_since_prev,
+        @@gap_next AS seconds_to_next;
+  PRINT P[P.txn_id, P.ts, P.amt, P.product, P.channel, P.risk_score, P.addr1] AS prev_txn;
+  PRINT N[N.txn_id, N.ts, N.amt, N.product, N.channel, N.risk_score, N.addr1] AS next_txn;
+}
+
+// --------------------------------------------------- 2. is this product novel?
+// Feeds product_novel_for_card, fitted at LR 2.297 and unreachable in v1.
+
+CREATE OR REPLACE QUERY product_novelty(VERTEX<Card> c_in, STRING product, DATETIME as_of)
+  FOR GRAPH GRAPH_GOA SYNTAX v1 {
+  SumAccum<INT> @@prior_this_product;
+  SumAccum<INT> @@total_this_product;
+  SumAccum<INT> @@prior_total;
+  SetAccum<STRING> @@products_before;
+  MinAccum<DATETIME> @@first_seen_product;
+  S = {c_in};
+  T = SELECT t FROM S:c -(MADE:e)- Transaction:t
+      ACCUM
+        IF t.ts < as_of THEN
+          @@prior_total += 1,
+          @@products_before += t.product
+        END,
+        IF t.product == product THEN
+          @@total_this_product += 1,
+          @@first_seen_product += t.ts,
+          IF t.ts < as_of THEN @@prior_this_product += 1 END
+        END;
+  PRINT @@prior_this_product AS prior_txns_this_product,
+        @@total_this_product AS total_txns_this_product,
+        @@prior_total AS prior_txns_on_card,
+        @@products_before AS products_used_before,
+        @@first_seen_product AS first_seen_with_product;
+}
+
+// ------------------------------------------------- 3. amount stats before a date
+// Card carries median/p95/max but no mean and no stddev, so amt_above_prior_p95ish
+// and amt_below_prior_mean had nothing behind them. Sums are returned raw and the
+// caller derives mean and stddev: doing the arithmetic here would hide the sample
+// size, and n matters when a card has four prior transactions.
+
+CREATE OR REPLACE QUERY card_amount_stats(VERTEX<Card> c_in, DATETIME as_of)
+  FOR GRAPH GRAPH_GOA SYNTAX v1 {
+  SumAccum<INT> @@n_prior;
+  SumAccum<DOUBLE> @@sum_amt;
+  SumAccum<DOUBLE> @@sum_amt_sq;
+  MaxAccum<DOUBLE> @@max_prior;
+  MinAccum<DOUBLE> @@min_prior;
+  S = {c_in};
+  C = SELECT c FROM S:c;
+  T = SELECT t FROM S:c -(MADE:e)- Transaction:t
+      WHERE t.ts < as_of
+      ACCUM
+        @@n_prior += 1,
+        @@sum_amt += t.amt,
+        @@sum_amt_sq += t.amt * t.amt,
+        @@max_prior += t.amt,
+        @@min_prior += t.amt;
+  PRINT @@n_prior AS n_prior,
+        @@sum_amt AS sum_amt,
+        @@sum_amt_sq AS sum_amt_sq,
+        @@max_prior AS max_prior_amt,
+        @@min_prior AS min_prior_amt;
+  PRINT C[C.median_amt, C.p95_amt, C.max_amt, C.n_txns] AS card_amounts;
+}
+
+// ------------------------------------------------------- 4. device key by label
+// Replaces memory.py::_device_key_for_label, which interpolated the label into an
+// INTERPRET QUERY string and scanned all 9,704 profiles. Same scan, no injection
+// surface, and it is an installed query so it compiles once.
+
+CREATE OR REPLACE QUERY device_by_label(STRING label) FOR GRAPH GRAPH_GOA SYNTAX v1 {
+  D = {DeviceProfile.*};
+  R = SELECT d FROM D:d WHERE d.label == label;
+  PRINT R[R.device_key, R.label, R.device_info, R.device_type, R.os, R.browser,
+          R.screen, R.n_txns, R.n_cards, R.n_customers] AS devices;
+}
+
+// --------------------------------------------------------------- 5. work queue
+// All 20 alerts with whatever case Sentinel has opened against each. Nothing in
+// v1 lists alerts, so the console had no queue to render.
+
+CREATE OR REPLACE QUERY alerts_queue() FOR GRAPH GRAPH_GOA SYNTAX v1 {
+  A = {Alert.*};
+  R = SELECT a FROM A:a ORDER BY a.opened_at ASC;
+  PRINT R[R.alert_id, R.opened_at, R.trigger_type, R.trigger_text, R.flagged_txn_id,
+          R.card_id, R.customer_id, R.risk_score, R.status] AS alerts;
+  F = SELECT f FROM A:a -(ALERT_CASE:e)- FraudCase:f;
+  PRINT F[F.case_id, F.source_alert, F.status, F.verdict, F.fraud_probability,
+          F.pattern, F.exposure_usd, F.sar_filed, F.created_at] AS cases;
+}
+
+// ----------------------------------------------------------------- 6. one case
+// The FraudCase vertex plus every edge set it owns. The rich body — evidence,
+// SAR narrative, routes, trajectory — deliberately does NOT live in the graph:
+// the answer JSON is the graded artefact and the graph is the relationship index.
+
+CREATE OR REPLACE QUERY case_by_id(VERTEX<FraudCase> f_in) FOR GRAPH GRAPH_GOA SYNTAX v1 {
+  S = {f_in};
+  R = SELECT f FROM S:f;
+  PRINT R AS fraud_case;
+  T = SELECT t FROM S:f -(CASE_INVOLVES:e)- Transaction:t ORDER BY t.ts ASC;
+  PRINT T[T.txn_id, T.ts, T.amt, T.product, T.channel, T.risk_score, T.addr1,
+          T.device_key] AS involved_txns;
+  C = SELECT c FROM S:f -(CASE_ON_CARD:e2)- Card:c;
+  PRINT C[C.card_id, C.customer_id, C.network, C.card_type, C.n_txns,
+          C.median_amt] AS on_card;
+  CN = SELECT c2 FROM S:f -(CASE_CONNECTED_TO:e3)- Card:c2;
+  PRINT CN[CN.card_id, CN.customer_id] AS connected_cards;
+  CC = SELECT cc FROM S:f -(CITES:e4)- ClosedCase:cc;
+  PRINT CC[CC.case_id, CC.outcome, CC.pattern, CC.exposure_usd,
+           CC.analyst_notes] AS cited_closed_cases;
+  FC = SELECT f2 FROM S:f -(CITES_CASE:e5)- FraudCase:f2;
+  PRINT FC[FC.case_id, FC.verdict, FC.summary] AS cited_sentinel_cases;
+  D = SELECT d FROM S:f -(IMPLICATES:e6)- DeviceProfile:d;
+  PRINT D[D.device_key, D.label, D.n_cards] AS implicated_devices;
+  AL = SELECT a FROM S:f -(FROM_ALERT:e7)- Alert:a;
+  PRINT AL[AL.alert_id, AL.trigger_type, AL.trigger_text, AL.risk_score] AS alert;
+}
+
+// -------------------------------------------------------------- 7. the canvas
+// Nodes and edges for the graph view, capped. Device profiles are returned with
+// n_cards so the canvas can fade a generic fingerprint: a profile spanning 842
+// cards is not evidence of a shared device and must not look like one.
+
+CREATE OR REPLACE QUERY case_subgraph(VERTEX<FraudCase> f_in, INT max_txns)
+  FOR GRAPH GRAPH_GOA SYNTAX v1 {
+  S = {f_in};
+  T = SELECT t FROM S:f -(CASE_INVOLVES:e)- Transaction:t
+      ORDER BY t.risk_score DESC LIMIT max_txns;
+  PRINT T[T.txn_id, T.ts, T.amt, T.channel, T.risk_score, T.addr1, T.device_key] AS txns;
+  C = SELECT c FROM S:f -(CASE_ON_CARD:e2)- Card:c;
+  PRINT C[C.card_id, C.customer_id, C.home_region, C.n_txns] AS cards;
+  CN = SELECT c2 FROM S:f -(CASE_CONNECTED_TO:e3)- Card:c2;
+  PRINT CN[CN.card_id, CN.customer_id] AS connected_cards;
+  D = SELECT d FROM T:t -(FROM_DEVICE:e4)- DeviceProfile:d;
+  PRINT D[D.device_key, D.label, D.n_cards, D.n_customers] AS devices;
+  RG = SELECT r FROM T:t -(BILLED_IN:e5)- BillingRegion:r;
+  PRINT RG[RG.region, RG.country, RG.n_cards] AS regions;
+  CU = SELECT cu FROM C:c -(OWNED_BY:e6)- Customer:cu;
+  PRINT CU[CU.customer_id, CU.n_cards, CU.n_txns] AS customers;
+}
+
+// --------------------------------------------------- 8. ring as an edge list
+// ring_expand is depth-1 and returns a set of cards. Community detection needs
+// the PAIRS, so this returns "cardA|cardB|device_key" strings and the components
+// are computed client-side, where a real algorithm is one import away.
+//
+// max_device_cards is a correctness gate, not a tuning knob: 116 of the 9,704
+// profiles carry 24,653 of the card links and the largest spans 842 cards.
+// Ungated, this merges the graph into one component and R6 then fires
+// CREATE_CASE + FILE_REPORT on nearly any card ever used online.
+
+CREATE OR REPLACE QUERY ring_expand_2hop(VERTEX<Card> c_in, DATETIME center, INT days,
+                                         INT max_device_cards, INT max_cards)
+  FOR GRAPH GRAPH_GOA SYNTAX v1 {
+  SetAccum<STRING> @@pairs;
+  SetAccum<STRING> @@hop1_cards;
+  SetAccum<STRING> @@hop2_cards;
+  SumAccum<INT> @shared;
+  SetAccum<STRING> @via;
+
+  S = {c_in};
+  T0 = SELECT t FROM S:c -(MADE:e)- Transaction:t
+       WHERE t.device_key != "" AND abs(datetime_diff(t.ts, center)) <= days * 86400;
+  D0 = SELECT d FROM T0:t -(FROM_DEVICE:e2)- DeviceProfile:d
+       WHERE d.n_cards <= max_device_cards;
+
+  T1 = SELECT t2 FROM D0:d -(DEVICE_USED_BY:e3)- Transaction:t2
+       WHERE abs(datetime_diff(t2.ts, center)) <= days * 86400;
+  C1 = SELECT c2 FROM T1:t2 -(MADE_BY:e4)- Card:c2
+       WHERE c2 != c_in
+       ACCUM c2.@shared += 1, c2.@via += t2.device_key
+       ORDER BY c2.@shared DESC LIMIT max_cards;
+  C1 = SELECT c2 FROM C1:c2 ACCUM @@hop1_cards += c2.card_id;
+  PRINT C1[C1.card_id, C1.customer_id, C1.@shared, C1.@via] AS hop1;
+
+  // Second hop: devices those cards used, gated again, and the cards behind them.
+  T2 = SELECT t3 FROM C1:c2 -(MADE:e5)- Transaction:t3
+       WHERE t3.device_key != "" AND abs(datetime_diff(t3.ts, center)) <= days * 86400;
+  D1 = SELECT d2 FROM T2:t3 -(FROM_DEVICE:e6)- DeviceProfile:d2
+       WHERE d2.n_cards <= max_device_cards;
+  T3 = SELECT t4 FROM D1:d2 -(DEVICE_USED_BY:e7)- Transaction:t4
+       WHERE abs(datetime_diff(t4.ts, center)) <= days * 86400;
+  C2 = SELECT c3 FROM T3:t4 -(MADE_BY:e8)- Card:c3
+       ACCUM @@hop2_cards += c3.card_id
+       LIMIT max_cards;
+  PRINT C2[C2.card_id, C2.customer_id] AS hop2;
+
+  // The edge list. One row per (card, card, device) co-occurrence.
+  E = SELECT t5 FROM D1:d2 -(DEVICE_USED_BY:e9)- Transaction:t5
+      WHERE abs(datetime_diff(t5.ts, center)) <= days * 86400;
+  F = SELECT c4 FROM E:t5 -(MADE_BY:e10)- Card:c4
+      ACCUM @@pairs += c4.card_id + "|" + t5.device_key;
+  PRINT @@pairs AS card_device_pairs;
+  PRINT D0[D0.device_key, D0.label, D0.n_cards] AS seed_devices;
+  PRINT D1[D1.device_key, D1.label, D1.n_cards] AS hop1_devices;
+}
+
+// ------------------------------------------------------- 9. the policy corpus
+// PolicyDoc is 0 rows today. Tens of chunks once ingested, so no paging.
+
+CREATE OR REPLACE QUERY policy_docs_all() FOR GRAPH GRAPH_GOA SYNTAX v1 {
+  P = {PolicyDoc.*};
+  R = SELECT p FROM P:p;
+  PRINT R[R.doc_id, R.source, R.section, R.title, R.text, R.emb] AS docs;
+}
+
+// ----------------------------------------------- 10. closed cases, by id range
+// 5,565 rows with embeddings would be a large single response, so the caller
+// pages by case_id range (CC-0001 .. CC-5565 sort lexicographically). Ranges
+// rather than OFFSET because the result is then stable under concurrent writes.
+// emb_len lets an interrupted ingest resume: a row that already has the right
+// dimension is skipped.
+
+CREATE OR REPLACE QUERY closed_case_range(STRING from_id, STRING to_id, BOOL with_emb)
+  FOR GRAPH GRAPH_GOA SYNTAX v1 {
+  CC = {ClosedCase.*};
+  R = SELECT cc FROM CC:cc
+      WHERE cc.case_id >= from_id AND cc.case_id < to_id
+      ORDER BY cc.case_id ASC;
+  IF with_emb THEN
+    PRINT R[R.case_id, R.customer_id, R.card_id, R.outcome, R.pattern, R.opened_at,
+            R.closed_at, R.exposure_usd, R.n_txns, R.actions_taken, R.report_filed,
+            R.analyst_notes, R.emb] AS cases;
+  ELSE
+    PRINT R[R.case_id, R.customer_id, R.card_id, R.outcome, R.pattern, R.opened_at,
+            R.closed_at, R.exposure_usd, R.n_txns, R.actions_taken, R.report_filed,
+            R.analyst_notes] AS cases;
+  END;
+}

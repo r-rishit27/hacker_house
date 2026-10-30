@@ -1,5 +1,10 @@
 # PRD — **Sentinel**: An Agentic Fraud Investigator on TigerGraph
 
+> **Superseded.** This describes the v1 build that produced the graph, the tool layer, the
+> ledger and the policy engine. The system now being built is specified in
+> [docs/system/PRD.md](system/PRD.md), [HLD.md](system/HLD.md) and [LLD.md](system/LLD.md).
+> Everything recorded here as fact still holds; what changed is listed in system/PRD.md §1.3.
+
 **Version** 1.0 · **Owner** Rishit Rastogi · **Target** TigerGraph Agentic Fraud Investigation, Hacker House Goa
 **Status** Draft for build
 

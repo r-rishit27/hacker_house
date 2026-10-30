@@ -1,0 +1,100 @@
+# The API, as a service. Install to /etc/systemd/system/sentinel-api.service.
+#
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now sentinel-api
+#   journalctl -u sentinel-api -f
+#
+# It binds 127.0.0.1 only. nginx in front of it terminates TLS and is the one
+# thing listening on a public port — see deploy/nginx-sentinel.conf and the
+# mixed-content note in deploy/README.md.
+
+[Unit]
+Description=Sentinel API — agentic fraud investigation on TigerGraph
+Documentation=https://github.com/r-rishit27/hacker_house
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=sentinel
+Group=sentinel
+WorkingDirectory=/opt/sentinel/app
+
+# Credentials and the deployment's own settings. Root-owned, 0640, readable by
+# the sentinel group and nobody else: it holds the TigerGraph secret and the
+# OpenAI key.
+EnvironmentFile=/etc/sentinel/sentinel.env
+
+# One worker, deliberately, and this is not a knob to turn up.
+#
+# The run registry that enforces max_concurrent_investigations, the SSE broker
+# every subscriber attaches to, and the asyncio tasks the investigations run
+# in are all process-local. A second worker would admit a run the first
+# worker's ceiling had already refused, and an EventSource would attach to a
+# broker that is not the one emitting its events — the console would show a
+# stream that never delivers. Concurrency inside the one process is what
+# max_concurrent_investigations is for.
+#
+# --proxy-headers so the request sees the scheme and host nginx forwarded,
+# which is what the absolute hrefs in problem bodies are built from.
+ExecStart=/opt/sentinel/venv/bin/uvicorn api.main:app \
+    --app-dir /opt/sentinel/app/backend \
+    --host 127.0.0.1 \
+    --port 8000 \
+    --workers 1 \
+    --proxy-headers \
+    --forwarded-allow-ips 127.0.0.1 \
+    --timeout-keep-alive 75 \
+    --log-config /opt/sentinel/app/backend/logging.json
+
+# SIGINT rather than SIGTERM: uvicorn treats it as a graceful shutdown, which
+# runs the lifespan's teardown — the httpx pool and the SQLAlchemy engine get
+# closed instead of being dropped mid-write.
+KillSignal=SIGINT
+# Long enough for an investigation in flight to finish its current step and
+# for the journal write to land. max_run_seconds is 300; this does not wait
+# for that, it waits for the shutdown to be orderly.
+TimeoutStopSec=45
+
+Restart=on-failure
+RestartSec=5s
+# Five restarts in a minute means the process is broken, not unlucky — stop
+# and leave the failure visible in `systemctl status` rather than flapping.
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+# Journald gets the JSON access line and the application log; logging.json
+# sends everything to stdout for exactly this.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sentinel-api
+
+# ── hardening ────────────────────────────────────────────────────────────────
+# The process reads the checkout and writes two directories inside it. It has
+# no business anywhere else on the filesystem.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+# backend/var holds the SQLite database (approvals, executions, audit, the
+# event journal) and the vector-index cache. runs/ holds recorded traces if a
+# batch is ever driven on the box. Everything else under the checkout is read
+# only, which is a property worth having: a bug cannot rewrite the graded
+# case files the executions answer from.
+ReadWritePaths=/opt/sentinel/app/backend/var /opt/sentinel/app/runs
+# Outbound TLS to TigerGraph Savanna and OpenAI, inbound from nginx on
+# loopback. No unix sockets, no raw packets.
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+# numpy holds the 5,611-vector index in memory; the rest is the event journal
+# and a few hundred rows. 1 GiB is generous and still catches a leak.
+MemoryMax=1G
+
+[Install]
+WantedBy=multi-user.target

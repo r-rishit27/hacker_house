@@ -1,0 +1,1229 @@
+{
+ "round1": [
+  {
+   "case": "HHG-001",
+   "truth": [
+    "cleared",
+    "none"
+   ],
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "case": "HHG-002",
+   "truth": [
+    "cleared",
+    "none"
+   ],
+   "hits": [],
+   "explanations": [
+    "high_amount_matches"
+   ]
+  },
+  {
+   "case": "HHG-003",
+   "truth": [
+    "confirmed_fraud",
+    "out_of_region_use"
+   ],
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "case": "HHG-004",
+   "truth": [
+    "cleared",
+    "none"
+   ],
+   "hits": [],
+   "explanations": [
+    "high_amount_matches",
+    "late_night_habit"
+   ]
+  },
+  {
+   "case": "HHG-005",
+   "truth": [
+    "cleared",
+    "none"
+   ],
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "case": "HHG-006",
+   "truth": [
+    "confirmed_fraud",
+    "undocumented"
+   ],
+   "hits": [
+    {
+     "key": "structuring_under_threshold",
+     "n_txns": 4,
+     "n_connected": 3,
+     "strength": 1.0,
+     "desc": "4 online purchases within 30 minutes, each between $456.96 and $488.04 \u2014 just under a $500 authorisation threshold \u2014 totalling $1,906.07; the same burst ran on 3 other cards in the same three weeks. Amounts appear chosen to stay under the threshold."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "case": "HHG-007",
+   "truth": [
+    "confirmed_fraud",
+    "out_of_region_use"
+   ],
+   "hits": [],
+   "explanations": [
+    "late_night_habit"
+   ]
+  },
+  {
+   "case": "HHG-008",
+   "truth": [
+    "confirmed_fraud",
+    "card_testing"
+   ],
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "case": "HHG-009",
+   "truth": [
+    "confirmed_fraud",
+    "card_not_present_fraud"
+   ],
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "case": "HHG-010",
+   "truth": [
+    "cleared",
+    "none"
+   ],
+   "hits": [],
+   "explanations": [
+    "high_amount_matches"
+   ]
+  },
+  {
+   "case": "HHG-011",
+   "truth": [
+    "confirmed_fraud",
+    "card_testing"
+   ],
+   "hits": [
+    {
+     "key": "card_testing",
+     "n_txns": 3,
+     "n_connected": 0,
+     "strength": 0.9,
+     "desc": "2 probe charges under $10 followed within 161 minutes by $58.87."
+    }
+   ],
+   "explanations": [
+    "high_amount_matches",
+    "late_night_habit"
+   ]
+  },
+  {
+   "case": "HHG-012",
+   "truth": [
+    "cleared",
+    "none"
+   ],
+   "hits": [],
+   "explanations": [
+    "late_night_habit"
+   ]
+  },
+  {
+   "case": "HHG-013",
+   "truth": [
+    "cleared",
+    "none"
+   ],
+   "hits": [],
+   "explanations": [
+    "late_night_habit"
+   ]
+  },
+  {
+   "case": "HHG-014",
+   "truth": [
+    "confirmed_fraud",
+    "undocumented"
+   ],
+   "hits": [
+    {
+     "key": "shared_device_ring",
+     "n_txns": 2,
+     "n_connected": 19,
+     "strength": 0.95,
+     "desc": "Device profile D2c2006f554c8, never seen on this account before 2016-11-15, made 2 online purchase(s) here; 19 other cards began using the same profile within 30 days, and 100% of its uses in that window were behind an anonymous proxy."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "case": "HHG-015",
+   "truth": [
+    "cleared",
+    "none"
+   ],
+   "hits": [],
+   "explanations": [
+    "high_amount_matches"
+   ]
+  },
+  {
+   "case": "HHG-016",
+   "truth": [
+    "confirmed_fraud",
+    "card_not_present_new_device"
+   ],
+   "hits": [],
+   "explanations": [
+    "new_device_fits"
+   ]
+  },
+  {
+   "case": "HHG-017",
+   "truth": [
+    "cleared",
+    "none"
+   ],
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "case": "HHG-018",
+   "truth": [
+    "confirmed_fraud",
+    "account_takeover"
+   ],
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "case": "HHG-019",
+   "truth": [
+    "confirmed_fraud",
+    "card_not_present_new_device"
+   ],
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "case": "HHG-020",
+   "truth": [
+    "cleared",
+    "none"
+   ],
+   "hits": [],
+   "explanations": []
+  }
+ ],
+ "january_block": [
+  {
+   "card": "C13487-K1",
+   "first_block_txn": 3660000,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C13489-K1",
+   "first_block_txn": 3660011,
+   "hits": [],
+   "explanations": [
+    "late_night_habit"
+   ]
+  },
+  {
+   "card": "C13512-K1",
+   "first_block_txn": 3660022,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C13516-K1",
+   "first_block_txn": 3660036,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C13517-K1",
+   "first_block_txn": 3660053,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C13521-K1",
+   "first_block_txn": 3660060,
+   "hits": [],
+   "explanations": [
+    "high_amount_matches"
+   ]
+  },
+  {
+   "card": "C13524-K1",
+   "first_block_txn": 3660076,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C13542-K1",
+   "first_block_txn": 3660091,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C05704-K2",
+   "first_block_txn": 3660096,
+   "hits": [
+    {
+     "key": "micro_charges",
+     "n_txns": 5,
+     "n_connected": 29,
+     "strength": 0.9,
+     "desc": "5 charges under $6 spread over 3 days, totalling $8.99, on a card that does not normally make purchases that small \u2014 each too small to trip any review; 29 other cards show the same drip in the same window."
+    },
+    {
+     "key": "card_testing",
+     "n_txns": 3,
+     "n_connected": 0,
+     "strength": 0.9,
+     "desc": "2 probe charges under $10 followed within 0 minutes by $211.02."
+    }
+   ],
+   "explanations": [
+    "proxy_habit"
+   ]
+  },
+  {
+   "card": "C00450-K1",
+   "first_block_txn": 3660099,
+   "hits": [
+    {
+     "key": "escalating_charges",
+     "n_txns": 4,
+     "n_connected": 0,
+     "strength": 0.85,
+     "desc": "4 online charges in 6 days, each larger than the last, from $37.97 to $672.98 against a usual $116.91 \u2014 probing how much the card will bear."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C07925-K1",
+   "first_block_txn": 3660101,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C11309-K1",
+   "first_block_txn": 3660104,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C05061-K1",
+   "first_block_txn": 3660106,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C02342-K1",
+   "first_block_txn": 3660109,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C10553-K1",
+   "first_block_txn": 3660111,
+   "hits": [
+    {
+     "key": "escalating_charges",
+     "n_txns": 5,
+     "n_connected": 0,
+     "strength": 0.85,
+     "desc": "5 online charges in 7 days, each larger than the last, from $50.08 to $1,271.33 against a usual $116.91 \u2014 probing how much the card will bear."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C05770-K1",
+   "first_block_txn": 3660113,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C07212-K2",
+   "first_block_txn": 3660115,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C09251-K1",
+   "first_block_txn": 3660117,
+   "hits": [],
+   "explanations": [
+    "proxy_habit"
+   ]
+  },
+  {
+   "card": "C07997-K1",
+   "first_block_txn": 3660120,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C11543-K2",
+   "first_block_txn": 3660122,
+   "hits": [],
+   "explanations": [
+    "proxy_habit"
+   ]
+  },
+  {
+   "card": "C06220-K1",
+   "first_block_txn": 3660125,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C06962-K2",
+   "first_block_txn": 3660128,
+   "hits": [
+    {
+     "key": "escalating_charges",
+     "n_txns": 4,
+     "n_connected": 0,
+     "strength": 0.85,
+     "desc": "4 online charges in 3 days, each larger than the last, from $28.45 to $388.96 against a usual $74.97 \u2014 probing how much the card will bear."
+    }
+   ],
+   "explanations": [
+    "proxy_habit"
+   ]
+  },
+  {
+   "card": "C09026-K1",
+   "first_block_txn": 3660131,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C09148-K1",
+   "first_block_txn": 3660137,
+   "hits": [
+    {
+     "key": "dormant_reactivation",
+     "n_txns": 5,
+     "n_connected": 0,
+     "strength": 0.85,
+     "desc": "The card was silent for 114 days (last use 2016-10-01), then made 5 online purchases totalling $2,231.58 against a prior median of $48.94."
+    },
+    {
+     "key": "escalating_charges",
+     "n_txns": 5,
+     "n_connected": 0,
+     "strength": 0.85,
+     "desc": "5 online charges in 6 days, each larger than the last, from $80.85 to $1,109.21 against a usual $48.94 \u2014 probing how much the card will bear."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C07847-K1",
+   "first_block_txn": 3660142,
+   "hits": [
+    {
+     "key": "dormant_reactivation",
+     "n_txns": 5,
+     "n_connected": 0,
+     "strength": 0.85,
+     "desc": "The card was silent for 46 days (last use 2016-12-06), then made 5 online purchases totalling $2,503.79 against a prior median of $36.25."
+    },
+    {
+     "key": "escalating_charges",
+     "n_txns": 5,
+     "n_connected": 0,
+     "strength": 0.85,
+     "desc": "5 online charges in 9 days, each larger than the last, from $96.68 to $1,238.11 against a usual $36.25 \u2014 probing how much the card will bear."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C11663-K1",
+   "first_block_txn": 3660147,
+   "hits": [
+    {
+     "key": "escalating_charges",
+     "n_txns": 4,
+     "n_connected": 0,
+     "strength": 0.85,
+     "desc": "4 online charges in 5 days, each larger than the last, from $181.73 to $1,800.00 against a usual $91.92 \u2014 probing how much the card will bear."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C08943-K2",
+   "first_block_txn": 3660154,
+   "hits": [
+    {
+     "key": "escalating_charges",
+     "n_txns": 6,
+     "n_connected": 0,
+     "strength": 0.85,
+     "desc": "6 online charges in 6 days, each larger than the last, from $23.19 to $1,800.00 against a usual $63.75 \u2014 probing how much the card will bear."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C08563-K1",
+   "first_block_txn": 3660159,
+   "hits": [
+    {
+     "key": "dormant_reactivation",
+     "n_txns": 5,
+     "n_connected": 0,
+     "strength": 0.85,
+     "desc": "The card was silent for 111 days (last use 2016-10-02), then made 5 online purchases totalling $3,483.78 against a prior median of $34.01."
+    },
+    {
+     "key": "escalating_charges",
+     "n_txns": 5,
+     "n_connected": 0,
+     "strength": 0.85,
+     "desc": "5 online charges in 9 days, each larger than the last, from $85.52 to $1,800.00 against a usual $34.01 \u2014 probing how much the card will bear."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C04096-K1",
+   "first_block_txn": 3660164,
+   "hits": [
+    {
+     "key": "dormant_reactivation",
+     "n_txns": 5,
+     "n_connected": 0,
+     "strength": 0.85,
+     "desc": "The card was silent for 46 days (last use 2016-12-07), then made 5 online purchases totalling $2,574.01 against a prior median of $28.45."
+    },
+    {
+     "key": "escalating_charges",
+     "n_txns": 5,
+     "n_connected": 0,
+     "strength": 0.85,
+     "desc": "5 online charges in 8 days, each larger than the last, from $75.81 to $1,306.52 against a usual $28.45 \u2014 probing how much the card will bear."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C03080-K2",
+   "first_block_txn": 3660169,
+   "hits": [
+    {
+     "key": "escalating_charges",
+     "n_txns": 5,
+     "n_connected": 0,
+     "strength": 0.85,
+     "desc": "5 online charges in 10 days, each larger than the last, from $97.57 to $1,696.31 against a usual $59.03 \u2014 probing how much the card will bear."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C11332-K1",
+   "first_block_txn": 3660174,
+   "hits": [
+    {
+     "key": "micro_charges",
+     "n_txns": 5,
+     "n_connected": 38,
+     "strength": 0.9,
+     "desc": "5 charges under $6 spread over 22 days, totalling $19.64, on a card that does not normally make purchases that small \u2014 each too small to trip any review; 38 other cards show the same drip in the same window."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C03488-K1",
+   "first_block_txn": 3660179,
+   "hits": [
+    {
+     "key": "micro_charges",
+     "n_txns": 4,
+     "n_connected": 30,
+     "strength": 0.9,
+     "desc": "4 charges under $6 spread over 3 days, totalling $12.53, on a card that does not normally make purchases that small \u2014 each too small to trip any review; 30 other cards show the same drip in the same window."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C05263-K2",
+   "first_block_txn": 3660183,
+   "hits": [
+    {
+     "key": "micro_charges",
+     "n_txns": 5,
+     "n_connected": 39,
+     "strength": 0.9,
+     "desc": "5 charges under $6 spread over 12 days, totalling $19.19, on a card that does not normally make purchases that small \u2014 each too small to trip any review; 39 other cards show the same drip in the same window."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C01326-K2",
+   "first_block_txn": 3660188,
+   "hits": [
+    {
+     "key": "micro_charges",
+     "n_txns": 5,
+     "n_connected": 34,
+     "strength": 0.9,
+     "desc": "5 charges under $6 spread over 22 days, totalling $17.66, on a card that does not normally make purchases that small \u2014 each too small to trip any review; 34 other cards show the same drip in the same window."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C02851-K2",
+   "first_block_txn": 3660193,
+   "hits": [
+    {
+     "key": "micro_charges",
+     "n_txns": 5,
+     "n_connected": 28,
+     "strength": 0.9,
+     "desc": "5 charges under $6 spread over 20 days, totalling $15.89, on a card that does not normally make purchases that small \u2014 each too small to trip any review; 28 other cards show the same drip in the same window."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C00129-K1",
+   "first_block_txn": 3660198,
+   "hits": [
+    {
+     "key": "micro_charges",
+     "n_txns": 5,
+     "n_connected": 38,
+     "strength": 0.9,
+     "desc": "5 charges under $6 spread over 22 days, totalling $14.47, on a card that does not normally make purchases that small \u2014 each too small to trip any review; 38 other cards show the same drip in the same window."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C09471-K2",
+   "first_block_txn": 3660203,
+   "hits": [
+    {
+     "key": "micro_charges",
+     "n_txns": 5,
+     "n_connected": 30,
+     "strength": 0.9,
+     "desc": "5 charges under $6 spread over 20 days, totalling $14.71, on a card that does not normally make purchases that small \u2014 each too small to trip any review; 30 other cards show the same drip in the same window."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C10035-K2",
+   "first_block_txn": 3660208,
+   "hits": [
+    {
+     "key": "micro_charges",
+     "n_txns": 5,
+     "n_connected": 38,
+     "strength": 0.9,
+     "desc": "5 charges under $6 spread over 26 days, totalling $16.23, on a card that does not normally make purchases that small \u2014 each too small to trip any review; 38 other cards show the same drip in the same window."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C04528-K1",
+   "first_block_txn": 3660213,
+   "hits": [
+    {
+     "key": "micro_charges",
+     "n_txns": 5,
+     "n_connected": 38,
+     "strength": 0.9,
+     "desc": "5 charges under $6 spread over 17 days, totalling $20.97, on a card that does not normally make purchases that small \u2014 each too small to trip any review; 38 other cards show the same drip in the same window."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C10654-K1",
+   "first_block_txn": 3660218,
+   "hits": [
+    {
+     "key": "micro_charges",
+     "n_txns": 4,
+     "n_connected": 34,
+     "strength": 0.9,
+     "desc": "4 charges under $6 spread over 12 days, totalling $9.81, on a card that does not normally make purchases that small \u2014 each too small to trip any review; 34 other cards show the same drip in the same window."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C03611-K2",
+   "first_block_txn": 3660222,
+   "hits": [
+    {
+     "key": "micro_charges",
+     "n_txns": 4,
+     "n_connected": 32,
+     "strength": 0.9,
+     "desc": "4 charges under $6 spread over 18 days, totalling $14.69, on a card that does not normally make purchases that small \u2014 each too small to trip any review; 32 other cards show the same drip in the same window."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C04274-K1",
+   "first_block_txn": 3660226,
+   "hits": [
+    {
+     "key": "micro_charges",
+     "n_txns": 4,
+     "n_connected": 29,
+     "strength": 0.9,
+     "desc": "4 charges under $6 spread over 11 days, totalling $11.63, on a card that does not normally make purchases that small \u2014 each too small to trip any review; 29 other cards show the same drip in the same window."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C05083-K1",
+   "first_block_txn": 3660230,
+   "hits": [
+    {
+     "key": "micro_charges",
+     "n_txns": 6,
+     "n_connected": 29,
+     "strength": 0.9,
+     "desc": "6 charges under $6 spread over 20 days, totalling $18.72, on a card that does not normally make purchases that small \u2014 each too small to trip any review; 29 other cards show the same drip in the same window."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C13290-K1",
+   "first_block_txn": 3660236,
+   "hits": [
+    {
+     "key": "micro_charges",
+     "n_txns": 5,
+     "n_connected": 35,
+     "strength": 0.9,
+     "desc": "5 charges under $6 spread over 24 days, totalling $19.67, on a card that does not normally make purchases that small \u2014 each too small to trip any review; 35 other cards show the same drip in the same window."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C03427-K2",
+   "first_block_txn": 3660241,
+   "hits": [
+    {
+     "key": "micro_charges",
+     "n_txns": 4,
+     "n_connected": 39,
+     "strength": 0.9,
+     "desc": "4 charges under $6 spread over 18 days, totalling $12.02, on a card that does not normally make purchases that small \u2014 each too small to trip any review; 39 other cards show the same drip in the same window."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C00348-K1",
+   "first_block_txn": 3660245,
+   "hits": [
+    {
+     "key": "micro_charges",
+     "n_txns": 6,
+     "n_connected": 39,
+     "strength": 0.9,
+     "desc": "6 charges under $6 spread over 21 days, totalling $23.17, on a card that does not normally make purchases that small \u2014 each too small to trip any review; 39 other cards show the same drip in the same window."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C06198-K1",
+   "first_block_txn": 3660251,
+   "hits": [
+    {
+     "key": "micro_charges",
+     "n_txns": 4,
+     "n_connected": 38,
+     "strength": 0.9,
+     "desc": "4 charges under $6 spread over 18 days, totalling $9.60, on a card that does not normally make purchases that small \u2014 each too small to trip any review; 38 other cards show the same drip in the same window."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C12975-K2",
+   "first_block_txn": 3660255,
+   "hits": [
+    {
+     "key": "micro_charges",
+     "n_txns": 6,
+     "n_connected": 33,
+     "strength": 0.9,
+     "desc": "6 charges under $6 spread over 21 days, totalling $23.99, on a card that does not normally make purchases that small \u2014 each too small to trip any review; 33 other cards show the same drip in the same window."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C01727-K2",
+   "first_block_txn": 3660261,
+   "hits": [
+    {
+     "key": "recipient_concentration",
+     "n_txns": 3,
+     "n_connected": 16,
+     "strength": 0.9,
+     "desc": "3 payment(s) to recipient sc.rr.com, which this card had never paid; 16 other cards began paying the same recipient in the last month, against about 0.4 a month before."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C00534-K2",
+   "first_block_txn": 3660264,
+   "hits": [
+    {
+     "key": "recipient_concentration",
+     "n_txns": 2,
+     "n_connected": 16,
+     "strength": 0.9,
+     "desc": "2 payment(s) to recipient sc.rr.com, which this card had never paid; 16 other cards began paying the same recipient in the last month, against about 0.4 a month before."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C11617-K1",
+   "first_block_txn": 3660266,
+   "hits": [
+    {
+     "key": "recipient_concentration",
+     "n_txns": 2,
+     "n_connected": 14,
+     "strength": 0.9,
+     "desc": "2 payment(s) to recipient sc.rr.com, which this card had never paid; 14 other cards began paying the same recipient in the last month, against about 1.2 a month before."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C03060-K1",
+   "first_block_txn": 3660268,
+   "hits": [
+    {
+     "key": "recipient_concentration",
+     "n_txns": 3,
+     "n_connected": 13,
+     "strength": 0.9,
+     "desc": "3 payment(s) to recipient sc.rr.com, which this card had never paid; 13 other cards began paying the same recipient in the last month, against about 1.2 a month before."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C10350-K1",
+   "first_block_txn": 3660271,
+   "hits": [
+    {
+     "key": "recipient_concentration",
+     "n_txns": 3,
+     "n_connected": 15,
+     "strength": 0.9,
+     "desc": "3 payment(s) to recipient sc.rr.com, which this card had never paid; 15 other cards began paying the same recipient in the last month, against about 0.8 a month before."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C01357-K1",
+   "first_block_txn": 3660274,
+   "hits": [
+    {
+     "key": "recipient_concentration",
+     "n_txns": 2,
+     "n_connected": 13,
+     "strength": 0.9,
+     "desc": "2 payment(s) to recipient sc.rr.com, which this card had never paid; 13 other cards began paying the same recipient in the last month, against about 1.2 a month before."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C11743-K2",
+   "first_block_txn": 3660276,
+   "hits": [
+    {
+     "key": "recipient_concentration",
+     "n_txns": 2,
+     "n_connected": 16,
+     "strength": 0.9,
+     "desc": "2 payment(s) to recipient sc.rr.com, which this card had never paid; 16 other cards began paying the same recipient in the last month, against about 0.4 a month before."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C05610-K1",
+   "first_block_txn": 3660278,
+   "hits": [
+    {
+     "key": "recipient_concentration",
+     "n_txns": 3,
+     "n_connected": 16,
+     "strength": 0.9,
+     "desc": "3 payment(s) to recipient sc.rr.com, which this card had never paid; 16 other cards began paying the same recipient in the last month, against about 0.4 a month before."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C01594-K1",
+   "first_block_txn": 3660281,
+   "hits": [
+    {
+     "key": "recipient_concentration",
+     "n_txns": 3,
+     "n_connected": 15,
+     "strength": 0.9,
+     "desc": "3 payment(s) to recipient sc.rr.com, which this card had never paid; 15 other cards began paying the same recipient in the last month, against about 0.6 a month before."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C01507-K1",
+   "first_block_txn": 3660284,
+   "hits": [
+    {
+     "key": "recipient_concentration",
+     "n_txns": 2,
+     "n_connected": 16,
+     "strength": 0.9,
+     "desc": "2 payment(s) to recipient sc.rr.com, which this card had never paid; 16 other cards began paying the same recipient in the last month, against about 0.4 a month before."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C04668-K1",
+   "first_block_txn": 3660286,
+   "hits": [
+    {
+     "key": "recipient_concentration",
+     "n_txns": 2,
+     "n_connected": 15,
+     "strength": 0.9,
+     "desc": "2 payment(s) to recipient sc.rr.com, which this card had never paid; 15 other cards began paying the same recipient in the last month, against about 0.6 a month before."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C02167-K2",
+   "first_block_txn": 3660288,
+   "hits": [
+    {
+     "key": "recipient_concentration",
+     "n_txns": 2,
+     "n_connected": 10,
+     "strength": 0.9,
+     "desc": "2 payment(s) to recipient sc.rr.com, which this card had never paid; 10 other cards began paying the same recipient in the last month, against about 1.2 a month before."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C09241-K1",
+   "first_block_txn": 3660290,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C00488-K1",
+   "first_block_txn": 3660293,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C09468-K1",
+   "first_block_txn": 3660296,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C12223-K1",
+   "first_block_txn": 3660299,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C12030-K1",
+   "first_block_txn": 3660303,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C04105-K2",
+   "first_block_txn": 3660307,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C06115-K1",
+   "first_block_txn": 3660311,
+   "hits": [
+    {
+     "key": "recipient_concentration",
+     "n_txns": 2,
+     "n_connected": 15,
+     "strength": 0.9,
+     "desc": "2 payment(s) to recipient sc.rr.com, which this card had never paid; 15 other cards began paying the same recipient in the last month, against about 0.8 a month before."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C08384-K1",
+   "first_block_txn": 3660313,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C04146-K1",
+   "first_block_txn": 3660315,
+   "hits": [
+    {
+     "key": "recipient_concentration",
+     "n_txns": 2,
+     "n_connected": 15,
+     "strength": 0.9,
+     "desc": "2 payment(s) to recipient sc.rr.com, which this card had never paid; 15 other cards began paying the same recipient in the last month, against about 0.8 a month before."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C11940-K1",
+   "first_block_txn": 3660317,
+   "hits": [
+    {
+     "key": "recipient_concentration",
+     "n_txns": 2,
+     "n_connected": 15,
+     "strength": 0.9,
+     "desc": "2 payment(s) to recipient sc.rr.com, which this card had never paid; 15 other cards began paying the same recipient in the last month, against about 0.6 a month before."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C06639-K1",
+   "first_block_txn": 3660319,
+   "hits": [
+    {
+     "key": "recipient_concentration",
+     "n_txns": 2,
+     "n_connected": 16,
+     "strength": 0.9,
+     "desc": "2 payment(s) to recipient sc.rr.com, which this card had never paid; 16 other cards began paying the same recipient in the last month, against about 0.4 a month before."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C07987-K2",
+   "first_block_txn": 3660321,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C07196-K2",
+   "first_block_txn": 3660324,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C05560-K2",
+   "first_block_txn": 3660327,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C03040-K2",
+   "first_block_txn": 3660329,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C03218-K2",
+   "first_block_txn": 3660332,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C05551-K2",
+   "first_block_txn": 3660334,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C11329-K1",
+   "first_block_txn": 3660336,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C03412-K1",
+   "first_block_txn": 3660338,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C00889-K2",
+   "first_block_txn": 3660341,
+   "hits": [
+    {
+     "key": "card_testing",
+     "n_txns": 4,
+     "n_connected": 0,
+     "strength": 0.9,
+     "desc": "3 probe charges under $10 followed within 23 minutes by $158.98."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C03066-K1",
+   "first_block_txn": 3660344,
+   "hits": [],
+   "explanations": []
+  },
+  {
+   "card": "C09582-K1",
+   "first_block_txn": 3660346,
+   "hits": [
+    {
+     "key": "card_testing",
+     "n_txns": 5,
+     "n_connected": 0,
+     "strength": 0.9,
+     "desc": "4 probe charges under $10 followed within 52 minutes by $236.28."
+    }
+   ],
+   "explanations": []
+  },
+  {
+   "card": "C07871-K1",
+   "first_block_txn": 3660351,
+   "hits": [],
+   "explanations": [
+    "new_device_fits",
+    "travel_cluster"
+   ]
+  },
+  {
+   "card": "C09177-K1",
+   "first_block_txn": 3660354,
+   "hits": [],
+   "explanations": []
+  }
+ ],
+ "controls": {
+  "n": 300,
+  "rate_by_detector": {
+   "dormant_reactivation": 0.0033
+  },
+  "examples": {
+   "dormant_reactivation": [
+    {
+     "card": "C00060-K1",
+     "as_of": "2017-01-19T00:00:00",
+     "desc": "The card was silent for 52 days (last use 2016-10-31), then made 7 online purchases totalling $2,932.00 against a prior median of $249.93."
+    }
+   ]
+  }
+ },
+ "recall": {
+  "account_takeover": {
+   "n": 20,
+   "any": 0.35,
+   "by_detector": {
+    "recipient_concentration": 6,
+    "shared_device_ring": 1
+   }
+  },
+  "card_not_present_fraud": {
+   "n": 20,
+   "any": 0.45,
+   "by_detector": {
+    "recipient_concentration": 9,
+    "card_testing": 1,
+    "escalating_charges": 1
+   }
+  },
+  "card_not_present_new_device": {
+   "n": 20,
+   "any": 0.35,
+   "by_detector": {
+    "card_testing": 2,
+    "recipient_concentration": 6
+   }
+  },
+  "card_testing": {
+   "n": 18,
+   "any": 0.944,
+   "by_detector": {
+    "recipient_concentration": 11,
+    "micro_charges": 4,
+    "card_testing": 14,
+    "escalating_charges": 1
+   }
+  },
+  "out_of_region_use": {
+   "n": 20,
+   "any": 0.35,
+   "by_detector": {
+    "recipient_concentration": 7,
+    "card_testing": 1
+   }
+  },
+  "undocumented": {
+   "n": 11,
+   "any": 1.0,
+   "by_detector": {
+    "shared_device_ring": 6,
+    "structuring_under_threshold": 6
+   }
+  }
+ },
+ "queries": 6083
+}

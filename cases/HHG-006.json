@@ -1,0 +1,296 @@
+{
+  "case_id": "HHG-006",
+  "case": {
+    "status": "escalated",
+    "verdict": "uncertain",
+    "fraud_probability": 0.5597,
+    "pattern": "card_not_present_new_device",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3476602",
+      "3476633",
+      "3476665",
+      "3476682"
+    ],
+    "first_suspicious_txn_id": "3476602",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 1906.07,
+    "evidence": [
+      {
+        "claim": "The bank's model scored this transaction 0.25, in its lowest band.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3476682)",
+        "entity_ids": [
+          "3476682"
+        ]
+      },
+      {
+        "claim": "The purchase was made online, without the card present.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3476682)",
+        "entity_ids": [
+          "3476682"
+        ]
+      },
+      {
+        "claim": "The amount is $482.12, under the $500 band.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3476682)",
+        "entity_ids": [
+          "3476682"
+        ]
+      },
+      {
+        "claim": "The amount is $482.12, not the sub-$5 size a probe authorisation uses.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3476682)",
+        "entity_ids": [
+          "3476682"
+        ]
+      },
+      {
+        "claim": "The billing country is the cardholder's home country.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3476682)",
+        "entity_ids": [
+          "3476682"
+        ]
+      },
+      {
+        "claim": "Every one of the card's unnamed match flags (M1-M9) is true.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3476682)",
+        "entity_ids": [
+          "3476682"
+        ]
+      },
+      {
+        "claim": "The transaction carries no distance value (an unnamed Vesta field).",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3476682)",
+        "entity_ids": [
+          "3476682"
+        ]
+      },
+      {
+        "claim": "The identity record marks this device as new for the account.",
+        "source": "graph",
+        "ref": "query:device_novelty(txn_id=3476682)",
+        "entity_ids": [
+          "3476682",
+          "D4936ab359677"
+        ]
+      },
+      {
+        "claim": "The identity record does not carry the 'Found' device state.",
+        "source": "graph",
+        "ref": "query:device_novelty(txn_id=3476682)",
+        "entity_ids": [
+          "3476682",
+          "D4936ab359677"
+        ]
+      },
+      {
+        "claim": "No proxy was recorded on the connection.",
+        "source": "graph",
+        "ref": "query:device_novelty(txn_id=3476682)",
+        "entity_ids": [
+          "3476682",
+          "D4936ab359677"
+        ]
+      },
+      {
+        "claim": "This card has used this device 2 time(s) before.",
+        "source": "graph",
+        "ref": "query:device_novelty(txn_id=3476682)",
+        "entity_ids": [
+          "3476682",
+          "D4936ab359677"
+        ]
+      },
+      {
+        "claim": "The identity match checks on this transaction did not fail.",
+        "source": "graph",
+        "ref": "query:device_novelty(txn_id=3476682)",
+        "entity_ids": [
+          "3476682",
+          "D4936ab359677"
+        ]
+      },
+      {
+        "claim": "The card has prior history.",
+        "source": "graph",
+        "ref": "query:region_novelty(card_id=C07297-K1, region=264.0, as_of=2016-11-21 20:30:00)",
+        "entity_ids": [
+          "C07297-K1",
+          "264.0"
+        ]
+      },
+      {
+        "claim": "The card had 28 prior transactions in billing region 264.0.",
+        "source": "graph",
+        "ref": "query:region_novelty(card_id=C07297-K1, region=264.0, as_of=2016-11-21 20:30:00)",
+        "entity_ids": [
+          "C07297-K1",
+          "264.0"
+        ]
+      },
+      {
+        "claim": "Billing region 264.0 is well established for this card (28 prior transactions, first seen 2016-07-06 00:29:46).",
+        "source": "graph",
+        "ref": "query:region_novelty(card_id=C07297-K1, region=264.0, as_of=2016-11-21 20:30:00)",
+        "entity_ids": [
+          "C07297-K1",
+          "264.0"
+        ]
+      },
+      {
+        "claim": "The card was used in person in 1 transaction(s) in a different billing region within a day of this one.",
+        "source": "graph",
+        "ref": "query:region_novelty(card_id=C07297-K1, region=264.0, as_of=2016-11-21 20:30:00)",
+        "entity_ids": [
+          "C07297-K1",
+          "264.0"
+        ]
+      },
+      {
+        "claim": "The previous transaction on this card was 6 minutes earlier.",
+        "source": "graph",
+        "ref": "query:txn_sequence_context(txn_id=3476682)",
+        "entity_ids": [
+          "3476682"
+        ]
+      },
+      {
+        "claim": "The previous transaction was 6 minutes earlier, inside the ten-minute burst window.",
+        "source": "graph",
+        "ref": "query:txn_sequence_context(txn_id=3476682)",
+        "entity_ids": [
+          "3476682"
+        ]
+      },
+      {
+        "claim": "This card has never been charged near $482.12 before.",
+        "source": "graph",
+        "ref": "query:amount_band_probe(card_id=C07297-K1, amt=482.12, tol=0.5, as_of=2016-11-21 20:30:00)",
+        "entity_ids": [
+          "C07297-K1"
+        ]
+      },
+      {
+        "claim": "$482.12 is above this card's prior mean of $116.73.",
+        "source": "graph",
+        "ref": "query:amount_band_probe(card_id=C07297-K1, amt=482.12, tol=0.5, as_of=2016-11-21 20:30:00)",
+        "entity_ids": [
+          "C07297-K1"
+        ]
+      },
+      {
+        "claim": "$482.12 is more than two standard deviations above this card's prior mean ($386.89).",
+        "source": "graph",
+        "ref": "query:amount_band_probe(card_id=C07297-K1, amt=482.12, tol=0.5, as_of=2016-11-21 20:30:00)",
+        "entity_ids": [
+          "C07297-K1"
+        ]
+      },
+      {
+        "claim": "A step-up authentication challenge was passed on a device this card knows.",
+        "source": "customer",
+        "ref": "evidence_request:1",
+        "entity_ids": []
+      },
+      {
+        "claim": "Fraud Policy R2. Customer denies the transaction — applied here because cardholder denies the transaction",
+        "source": "document",
+        "ref": "doc:POL-R2#R2",
+        "entity_ids": [
+          "POL-R2"
+        ]
+      },
+      {
+        "claim": "Fraud Policy R8. Escalate when uncertain and exposed — applied here because verdict is uncertain and exposure $1,906.07 exceeds $500",
+        "source": "document",
+        "ref": "doc:POL-R8#R8",
+        "entity_ids": [
+          "POL-R8"
+        ]
+      },
+      {
+        "claim": "Fraud Policy §3a. A case is not a report — applied here because 3a: no report. fraud is neither confirmed nor strongly suspected (probability 0.56); the activity connects to no shared device profile, region cluster or other customer's fraud.",
+        "source": "document",
+        "ref": "doc:POL-3A#3a",
+        "entity_ids": [
+          "POL-3A"
+        ]
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-2696",
+      "CC-4938",
+      "CC-0150",
+      "CC-2662",
+      "CC-2209",
+      "CC-2609"
+    ],
+    "summary": "This is an online card-not-present purchase on a device marked new for the account, with every unnamed match flag true and no proxy recorded. The amount, $482.12, is unusual for this card and above its prior mean, and the card has never been charged near $482.12 before. The evidence points to card-not-present fraud from a new device rather than card testing or out-of-region use, though the billing country is the cardholder's home country and the identity checks did not fail.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-HHG-006"
+  },
+  "evidence_requests": [
+    {
+      "type": "step_up_auth",
+      "asked_after_step": 7,
+      "assumed_response": "Step-up challenge passed: the one-time passcode was entered correctly."
+    }
+  ],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2: cardholder denies the transaction"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R2: cardholder denies the transaction"
+      },
+      {
+        "action": "ESCALATE_TO_ANALYST",
+        "route": "auto",
+        "reason": "R8: verdict is uncertain and exposure $1,906.07 exceeds $500"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "3a: fraud confirmed or strongly suspected and exposure $1,906.07 exceeds $1,000."
+      }
+    ],
+    "final": [
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: a case is opened once fraud probability reaches 0.30 (assessed 0.56) or evidence has been requested"
+      },
+      {
+        "action": "ESCALATE_TO_ANALYST",
+        "route": "auto",
+        "reason": "R8: verdict is uncertain and exposure $1,906.07 exceeds $500"
+      }
+    ],
+    "what_changed": "The initial recommendation included filing a report because the case was treated as strongly suspicious with exposure above the reporting threshold. After review, the probability remained uncertain at 0.56, the step-up challenge was passed, and the activity did not connect to a shared device profile, region cluster, or other customer's fraud, so the report recommendation was removed."
+  },
+  "sar": {
+    "file": false,
+    "reason": "3a: no report. fraud is neither confirmed nor strongly suspected (probability 0.56); the activity connects to no shared device profile, region cluster or other customer's fraud.",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0.0,
+    "activity_dates": []
+  },
+  "stop_reason": "Investigation stopped under policy 3a: no report, because fraud is neither confirmed nor strongly suspected at probability 0.56 and the activity connects to no shared device profile, region cluster, or other customer's fraud.",
+  "tool_calls": 12,
+  "tokens": 7545,
+  "latency_s": 15.46
+}

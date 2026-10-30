@@ -1,0 +1,181 @@
+/**
+ * Sentinel design tokens — the single source of visual truth.
+ * No component defines a colour. See DESIGN_SYSTEM.md §6.
+ *
+ * The palette is the warm-paper system from the console design study in
+ * `UI/Sentinel Console.dc.html`: an off-white stock rather than a blue-grey
+ * one, ink instead of black, and a single orange as the only chrome accent.
+ * The study carries six hues and no more, so the tokens below carry six.
+ *
+ * The one thing worth knowing before editing: **hue is meaning here.** Orange
+ * is never a verdict, and purple is never chrome. The mapping is
+ *
+ *   accent   orange   chrome, the live agent, evidence drawn from the graph
+ *   danger   red      fraud · route L2 · block
+ *   success  green    legitimate · route auto · cleared
+ *   warning  purple   uncertain · route L1 · an unanswered request
+ *   info     blue     a document — policy, a prior case, retrieved memory
+ *   txn      taupe    a transaction node, which is a fact and not a judgement
+ *
+ * `--authority` shares purple with `--warning` deliberately: in the study the
+ * approval chrome and the uncertain verdict are the same hue, because both
+ * mean "a human has not settled this yet". They are two tokens rather than
+ * one so they can diverge without a find-and-replace.
+ *
+ * Contrast: every text pair below clears WCAG AA (4.5:1) on its own surface
+ * and every fill clears 3:1. Measured ratios are in DESIGN_SYSTEM.md §2.
+ */
+
+:root {
+  /* ── neutrals: warm paper, warm ink ───────────────────────────────────── */
+  --bg: #f7f4ef;
+  --surface: #ffffff;
+  --surface-2: #f6f2ec;
+  --surface-3: #f2ede5;
+  --border: #e8e2d9;
+  --border-strong: #978a78; /* 3.08:1 on paper — interactive boundaries */
+  --fg: #1d1813; /* 16.05:1 on paper */
+  --fg-muted: #6d645b; /*  5.28:1 on paper */
+  --fg-subtle: #736a61; /*  4.83:1 on paper — do not lighten; #7A7168 measures 4.36 and fails */
+
+  /* ── semantic ─────────────────────────────────────────────────────────── */
+  --accent: #b54a09; /* 4.85:1 on paper — the text-safe orange. See --accent-bold. */
+  --accent-tint: #fff1e4;
+  --accent-contrast: #ffffff;
+  /* The study's own orange. It measures 2.79:1 on paper, so it is decoration
+     and nothing else: the masthead mark, the moving stripe, a tint behind a
+     row. Anything carrying meaning — a label, a node stroke — uses --accent. */
+  --accent-bold: #f26a1b;
+
+  --danger: #cc2b4e; /* toward fraud, destructive, route L2 */
+  --danger-tint: #fce9ed;
+  --danger-contrast: #ffffff;
+
+  --success: #2e7d5b; /* toward legitimate, cleared, route auto */
+  --success-tint: #e6f4ec;
+  --success-contrast: #ffffff;
+
+  --warning: #7b5ea7; /* uncertain, route L1, awaiting a person */
+  --warning-tint: #f2ecfa;
+  --warning-contrast: #ffffff;
+
+  --info: #2f6bb5; /* a document: policy, closed case, retrieved memory */
+  --info-tint: #eef3fa;
+  --info-contrast: #ffffff;
+
+  --authority: #7b5ea7; /* approval authority — see the note above */
+  --authority-tint: #f5f0fb;
+  --authority-contrast: #ffffff;
+
+  --txn: #837869; /* 3.94:1 on paper — a transaction: a fact, not a judgement */
+
+  /* ── meter: identical in both themes, so a screenshot means the same thing ── */
+  --meter-0: #2e7d5b; /* p <= 0.15 */
+  --meter-1: #7d8a4a; /* 0.15 < p <= 0.40 */
+  --meter-2: #7b5ea7; /* 0.40 < p <= 0.70 */
+  --meter-3: #cc2b4e; /* p > 0.70 */
+  --meter-track: #ece6dd;
+
+  /* ── radius ───────────────────────────────────────────────────────────── */
+  --radius-sm: 5px;
+  --radius-md: 7px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-full: 9999px;
+
+  /* ── elevation: light leans on shadow, warmed to the paper ────────────── */
+  --elev-1: 0 1px 2px rgb(60 42 26 / 0.07), 0 1px 1px rgb(60 42 26 / 0.04);
+  --elev-2: 0 4px 12px rgb(60 42 26 / 0.1), 0 1px 3px rgb(60 42 26 / 0.06);
+  --elev-3: 0 12px 34px rgb(60 42 26 / 0.18);
+
+  /* ── motion ───────────────────────────────────────────────────────────── */
+  --motion-fast: 120ms;
+  --motion-base: 180ms;
+  --motion-slow: 240ms;
+  --motion-stream: 320ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  /* How fast the agent's steps arrive on screen. The console reads this so the
+     stream cadence and the CSS that decorates it cannot drift apart. */
+  --stream-step: 460ms;
+
+  /* ── layers ───────────────────────────────────────────────────────────── */
+  --z-sticky: 10;
+  --z-dropdown: 30;
+  --z-view: 20;
+  --z-drawer: 40;
+  --z-dialog: 50;
+  --z-toast: 60;
+  --z-tooltip: 70;
+
+  color-scheme: light;
+}
+
+/* The console is a light instrument.
+ *
+ * The design study is printed on paper and has no dark variant, and the
+ * palette carries meaning — warm stock, ink, one orange. Following the
+ * viewer's OS preference produced a console that did not look like the thing
+ * it was ported from, on any machine set to dark, which is most of them.
+ *
+ * So there is no `prefers-color-scheme` rule here. Dark exists, below, but
+ * only for a viewer who asks for it by setting `data-theme="dark"` on the
+ * root. It is a courtesy, not the default, and screenshots of this console
+ * are light.
+ */
+:root[data-theme="dark"] {
+  --bg: #14100c;
+  --surface: #1d1813;
+  --surface-2: #26201a;
+  --surface-3: #322a22;
+  --border: #322a22;
+  --border-strong: #7e7263;
+  --fg: #f3ece2;
+  --fg-muted: #b3a798;
+  --fg-subtle: #968b7d;
+
+  --accent: #f79b5c;
+  --accent-tint: #33200f;
+  --accent-contrast: #14100c;
+  --accent-bold: #f26a1b;
+
+  --danger: #f2879c;
+  --danger-tint: #33141c;
+  --danger-contrast: #14100c;
+
+  --success: #6fc79c;
+  --success-tint: #0f2a1f;
+  --success-contrast: #14100c;
+
+  --warning: #c0a6e0;
+  --warning-tint: #241a33;
+  --warning-contrast: #14100c;
+
+  --info: #8fbaea;
+  --info-tint: #13243a;
+  --info-contrast: #14100c;
+
+  --authority: #c0a6e0;
+  --authority-tint: #241a33;
+  --authority-contrast: #14100c;
+
+  --txn: #a1968a;
+
+  --meter-track: #322a22;
+
+  --elev-1: 0 0 0 1px var(--border);
+  --elev-2: 0 0 0 1px var(--border), 0 8px 24px rgb(0 0 0 / 0.5);
+  --elev-3: 0 0 0 1px var(--border-strong), 0 16px 48px rgb(0 0 0 / 0.6);
+
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 1ms;
+    --motion-base: 1ms;
+    --motion-slow: 1ms;
+    --motion-stream: 1ms;
+  }
+}

@@ -1,16 +1,28 @@
-# The tool layer: 16 GSQL queries, exposed over MCP
+# The tool layer: 26 GSQL queries, exposed over MCP
 
-Step 5 of the build plan. The agent's entire view of the graph is these sixteen
-questions.
+The agent's entire view of the graph is a fixed set of questions. Sixteen were
+written for the hand investigation; ten more were added for the console, the
+corpus and the two-hop ring. Nineteen of the twenty-six are exposed to the
+agent — the console's own read queries are deliberately withheld, because a
+tool the agent can call is a tool it can call on the wrong case.
 
 ```bash
 python scripts/install_queries.py     # create + install (compiles, ~4 min)
-python scripts/test_tools.py          # 26 assertions against the hand investigation
 python scripts/setup_mcp.py           # mint token, write .env + .mcp.json, verify
+python scripts/setup_mcp.py --check   # start the MCP server and call a query through it
 python scripts/setup_mcp.py --refresh # tokens expire; re-mint
 ```
 
-## The sixteen
+Every installed query has its source in `graph/queries/`. That is checked
+rather than assumed: two `_zz_` scratch queries were once installed with no
+source, making the live count 28 where the repo produced 26, so a graph rebuilt
+from the repo silently differed from the one every number was measured
+against. They are dropped.
+
+The 34 live assertions that used to live in `scripts/test_tools.py` are now
+`backend/tests/live/test_graph_repository.py`, run with `pytest -m live`.
+
+## The first sixteen
 
 | # | Query | Answers |
 |---|---|---|
@@ -31,6 +43,27 @@ python scripts/setup_mcp.py --refresh # tokens expire; re-mint
 | 15 | `similar_prior_cases` | Structural retrieval over the 5,565 closed cases |
 | 16 | `case_memory_for_card` | Bank closed cases **and cases Sentinel wrote earlier in the run** |
 
+## The ten added since
+
+| # | Query | Answers | Exposed to the agent |
+|---|---|---|---|
+| 17 | `txn_sequence_context` | The `NEXT` edge either side — seconds since the previous transaction on this card | yes |
+| 18 | `card_amount_stats` | Raw sums, so the caller can see the sample size behind a mean | yes |
+| 19 | `product_novelty` | Has this card bought this product code before | yes |
+| 20 | `device_by_label` | A device profile by its composite label, replacing an interpolated full scan | yes |
+| 21 | `ring_expand_2hop` | Two hops through *specific* profiles, with the card-device edge list | yes |
+| 22 | `alerts_queue` | All 20 alerts joined to any case — the console's work queue | no |
+| 23 | `case_by_id` | One `FraudCase` and its six edge sets | no |
+| 24 | `case_subgraph` | Nodes and edges shaped for the graph canvas | no |
+| 25 | `policy_docs_all` | The `PolicyDoc` corpus, for the vector index | no |
+| 26 | `closed_case_range` | Closed cases by id range, with or without `emb` | no |
+
+`txn_sequence_context` is the one worth naming: it reads the **576,425 `NEXT`
+edges** that no query in the first sixteen ever traversed. On HHG-003's flagged
+transaction it returns `seconds_since_prev = 2920` — 48.7 minutes, inside the
+one-hour burst band, and a fitted feature that had no tool behind it until it
+existed.
+
 Two conventions worth knowing:
 
 - **Vertex-typed parameters** (`VERTEX<Card> c_in`) seed traversal in O(1). String
@@ -39,7 +72,7 @@ Two conventions worth knowing:
   requires 1-tuples — `{"c_in": ("C08623-K2",)}` — or it silently falls back to a
   deprecated GET path.
 - **Queries return facts, not verdicts.** R5's "three or more", R1's 0.70 and the
-  rest live in `sentinel/policy.py` where they are unit-testable. A query may
+  rest live in `backend/sentinel/policy/engine.py` where they are unit-testable. A query may
   compute a convenience count; nothing is allowed to treat it as the decision.
 
 ## What the exit test caught

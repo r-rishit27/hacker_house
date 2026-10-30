@@ -1,0 +1,83 @@
+# What the deployed API process needs, pinned.
+#
+# `pyproject.toml` stays the source of truth for what the backend *depends on*
+# — the ranges, the extras, the reasons. This file is the resolution of those
+# ranges that has actually been run, frozen so the EC2 box installs the same
+# tree the laptop tested. Nothing here is a dev or an ETL dependency: pytest,
+# ruff, mypy, pandas, duckdb and pyTigerGraph are all in the optional extras
+# and none of them is imported on a request path.
+#
+#   python3.12 -m venv /opt/sentinel/venv
+#   /opt/sentinel/venv/bin/pip install -r backend/requirements.txt
+#   /opt/sentinel/venv/bin/pip install --no-deps -e ./backend
+#
+# The second line installs the `sentinel` and `api` packages themselves
+# without re-resolving anything, so the pins below are the whole tree.
+#
+# `-e` is not a convenience there, it is required. `Settings.ROOT` is derived
+# from the settings module's own path — backend/sentinel/config/settings.py,
+# up three — and that is what anchors `cases/`, `case_pack.csv`, `runs/`,
+# `exploration/rings.json` and `backend/var/`. A regular install copies the
+# package into site-packages, where "up three" is a directory in the venv and
+# every one of those paths silently points at nothing. Editable leaves the
+# module in the checkout, so ROOT stays the checkout.
+#
+# To refresh after changing pyproject.toml: install the new ranges into a
+# clean venv, run `python -m sentinel doctor` and the test suite against it,
+# then regenerate this file from that venv.
+
+# ── the web layer ────────────────────────────────────────────────────────────
+fastapi==0.141.1
+starlette==1.6.0
+annotated-doc==0.0.5
+# [standard] pulls uvloop, httptools and websockets: the event loop and the
+# HTTP parser that keep an SSE connection cheap while a run is in flight.
+uvicorn==0.53.0
+uvloop==0.22.1
+httptools==0.8.0
+websockets==17.1
+watchfiles==1.2.0
+h11==0.16.0
+click==8.5.0
+pyyaml==6.0.3
+
+# ── configuration and contracts ──────────────────────────────────────────────
+pydantic==2.13.5
+pydantic-core==2.46.5
+pydantic-settings==2.15.0
+python-dotenv==1.2.3
+typing-extensions==4.16.0
+typing-inspection==0.4.4
+annotated-types==0.8.0
+
+# ── the two outbound dependencies ────────────────────────────────────────────
+# TigerGraph REST++ is reached over plain httpx; there is no pyTigerGraph on
+# the hot path (it is a `scripts` extra, used by the one-shot loaders only).
+httpx==0.28.1
+httpcore==1.0.9
+openai==3.16.2
+httpx2==2.13.0
+httpcore2==2.13.0
+jiter==0.17.0
+truststore==0.10.4
+certifi==2026.7.22
+idna==3.20
+anyio==4.15.1
+sniffio==1.3.1
+
+# ── operational state ────────────────────────────────────────────────────────
+# Approvals, executions, the audit log and the event journal. SQLite is
+# deliberate: one process writes it (see the single-worker note in the
+# systemd unit), and a file on the instance's volume is one fewer thing to
+# provision than RDS.
+sqlalchemy==2.0.54
+aiosqlite==0.22.1
+# Without greenlet every async SQLAlchemy call fails at the first await with
+# "the greenlet library is required". It arrives via sqlalchemy[asyncio];
+# it is pinned here because a resolver that misses the extra fails at runtime
+# rather than at install time.
+greenlet==3.5.6
+
+# ── the vector index ─────────────────────────────────────────────────────────
+# 5,611 embeddings held in memory and cached to backend/var/corpus as .npz.
+numpy==2.5.3

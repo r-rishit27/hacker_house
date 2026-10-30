@@ -1,0 +1,213 @@
+{
+  "case_id": "HHG-004",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.9911,
+    "pattern": "card_not_present_new_device",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3580804",
+      "3583227",
+      "3583503",
+      "3585446"
+    ],
+    "first_suspicious_txn_id": "3580804",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 321.05,
+    "evidence": [
+      {
+        "claim": "The bank's model scored this transaction 0.34, in its second band.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3583227)",
+        "entity_ids": [
+          "3583227"
+        ]
+      },
+      {
+        "claim": "The purchase was made online, without the card present.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3583227)",
+        "entity_ids": [
+          "3583227"
+        ]
+      },
+      {
+        "claim": "The amount is $128.33, under the $500 band.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3583227)",
+        "entity_ids": [
+          "3583227"
+        ]
+      },
+      {
+        "claim": "The amount is $128.33, not the sub-$5 size a probe authorisation uses.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3583227)",
+        "entity_ids": [
+          "3583227"
+        ]
+      },
+      {
+        "claim": "Every one of the card's unnamed match flags (M1-M9) is true.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3583227)",
+        "entity_ids": [
+          "3583227"
+        ]
+      },
+      {
+        "claim": "The transaction carries no distance value (an unnamed Vesta field).",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3583227)",
+        "entity_ids": [
+          "3583227"
+        ]
+      },
+      {
+        "claim": "The identity record marks this device as new for the account.",
+        "source": "graph",
+        "ref": "query:device_novelty(txn_id=3583227)",
+        "entity_ids": [
+          "3583227",
+          "Ddea148c23d58"
+        ]
+      },
+      {
+        "claim": "The identity record does not carry the 'Found' device state.",
+        "source": "graph",
+        "ref": "query:device_novelty(txn_id=3583227)",
+        "entity_ids": [
+          "3583227",
+          "Ddea148c23d58"
+        ]
+      },
+      {
+        "claim": "No proxy was recorded on the connection.",
+        "source": "graph",
+        "ref": "query:device_novelty(txn_id=3583227)",
+        "entity_ids": [
+          "3583227",
+          "Ddea148c23d58"
+        ]
+      },
+      {
+        "claim": "This card has never been used on this device before.",
+        "source": "graph",
+        "ref": "query:device_novelty(txn_id=3583227)",
+        "entity_ids": [
+          "3583227",
+          "Ddea148c23d58"
+        ]
+      },
+      {
+        "claim": "The previous transaction was 23.5 hours earlier.",
+        "source": "graph",
+        "ref": "query:txn_sequence_context(txn_id=3583227)",
+        "entity_ids": [
+          "3583227"
+        ]
+      },
+      {
+        "claim": "The previous transaction was more than ten minutes earlier.",
+        "source": "graph",
+        "ref": "query:txn_sequence_context(txn_id=3583227)",
+        "entity_ids": [
+          "3583227"
+        ]
+      },
+      {
+        "claim": "This card has never been charged near $128.33 before.",
+        "source": "graph",
+        "ref": "query:amount_band_probe(card_id=C08106-K1, amt=128.33, tol=0.5, as_of=2016-12-29 01:53:54)",
+        "entity_ids": [
+          "C08106-K1"
+        ]
+      },
+      {
+        "claim": "$128.33 is above this card's prior mean of $35.31.",
+        "source": "graph",
+        "ref": "query:amount_band_probe(card_id=C08106-K1, amt=128.33, tol=0.5, as_of=2016-12-29 01:53:54)",
+        "entity_ids": [
+          "C08106-K1"
+        ]
+      },
+      {
+        "claim": "$128.33 is more than two standard deviations above this card's prior mean ($90.89).",
+        "source": "graph",
+        "ref": "query:amount_band_probe(card_id=C08106-K1, amt=128.33, tol=0.5, as_of=2016-12-29 01:53:54)",
+        "entity_ids": [
+          "C08106-K1"
+        ]
+      },
+      {
+        "claim": "Fraud Policy R2. Customer denies the transaction — applied here because cardholder denies the transaction",
+        "source": "document",
+        "ref": "doc:POL-R2#R2",
+        "entity_ids": [
+          "POL-R2"
+        ]
+      },
+      {
+        "claim": "Fraud Policy §3a. A case is not a report — applied here because 3a: no report. exposure $321.05 is at or below $1,000; the activity connects to no shared device profile, region cluster or other customer's fraud.",
+        "source": "document",
+        "ref": "doc:POL-3A#3a",
+        "entity_ids": [
+          "POL-3A"
+        ]
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-1891",
+      "CC-3778",
+      "CC-0696",
+      "CC-2008",
+      "CC-1736",
+      "CC-2038"
+    ],
+    "summary": "The evidence shows card-not-present activity on a device marked new for this account, with every unnamed match flag true and no proxy recorded. The $128.33 online purchase is also unusual for this card because it is above the prior mean of $35.31 and more than two standard deviations above the prior mean ($90.89), and the card has never been charged near $128.33 before. Prior closed cases for this cardholder include confirmed card-not-present fraud, so this looks consistent with that pattern rather than legitimate use.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-HHG-004"
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2: cardholder denies the transaction"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R2: cardholder denies the transaction"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2: cardholder denies the transaction"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R2: cardholder denies the transaction"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": false,
+    "reason": "3a: no report. exposure $321.05 is at or below $1,000; the activity connects to no shared device profile, region cluster or other customer's fraud.",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0.0,
+    "activity_dates": []
+  },
+  "stop_reason": "Policy 6: probability 0.99 is at or above 0.85 with 4 independent pieces of evidence.",
+  "tool_calls": 11,
+  "tokens": 6754,
+  "latency_s": 17.94
+}

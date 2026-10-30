@@ -1,0 +1,183 @@
+{
+  "case_id": "HHG-002",
+  "case": {
+    "status": "open",
+    "verdict": "uncertain",
+    "fraud_probability": 0.7469,
+    "pattern": "card_not_present_fraud",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3478782"
+    ],
+    "first_suspicious_txn_id": "3478782",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 292.36,
+    "evidence": [
+      {
+        "claim": "The bank's model scored this transaction 0.79, in its second-highest band.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3478782)",
+        "entity_ids": [
+          "3478782"
+        ]
+      },
+      {
+        "claim": "The purchase was made online, without the card present.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3478782)",
+        "entity_ids": [
+          "3478782"
+        ]
+      },
+      {
+        "claim": "The amount is $292.36, under the $500 band.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3478782)",
+        "entity_ids": [
+          "3478782"
+        ]
+      },
+      {
+        "claim": "The amount is $292.36, not the sub-$5 size a probe authorisation uses.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3478782)",
+        "entity_ids": [
+          "3478782"
+        ]
+      },
+      {
+        "claim": "Every one of the card's unnamed match flags (M1-M9) is true.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3478782)",
+        "entity_ids": [
+          "3478782"
+        ]
+      },
+      {
+        "claim": "The transaction carries no distance value (an unnamed Vesta field).",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3478782)",
+        "entity_ids": [
+          "3478782"
+        ]
+      },
+      {
+        "claim": "The card has 35 prior purchases of product code C.",
+        "source": "graph",
+        "ref": "query:product_novelty(card_id=C11891-K1, product=C, as_of=2016-11-22 17:27:07)",
+        "entity_ids": [
+          "C11891-K1"
+        ]
+      },
+      {
+        "claim": "The previous transaction was 401.9 hours earlier.",
+        "source": "graph",
+        "ref": "query:txn_sequence_context(txn_id=3478782)",
+        "entity_ids": [
+          "3478782"
+        ]
+      },
+      {
+        "claim": "The previous transaction was more than ten minutes earlier.",
+        "source": "graph",
+        "ref": "query:txn_sequence_context(txn_id=3478782)",
+        "entity_ids": [
+          "3478782"
+        ]
+      },
+      {
+        "claim": "This card has never been charged near $292.36 before.",
+        "source": "graph",
+        "ref": "query:amount_band_probe(card_id=C11891-K1, amt=292.36, tol=0.5, as_of=2016-11-22 17:27:07)",
+        "entity_ids": [
+          "C11891-K1"
+        ]
+      },
+      {
+        "claim": "$292.36 is above this card's prior mean of $44.66.",
+        "source": "graph",
+        "ref": "query:amount_band_probe(card_id=C11891-K1, amt=292.36, tol=0.5, as_of=2016-11-22 17:27:07)",
+        "entity_ids": [
+          "C11891-K1"
+        ]
+      },
+      {
+        "claim": "$292.36 is more than two standard deviations above this card's prior mean ($95.93).",
+        "source": "graph",
+        "ref": "query:amount_band_probe(card_id=C11891-K1, amt=292.36, tol=0.5, as_of=2016-11-22 17:27:07)",
+        "entity_ids": [
+          "C11891-K1"
+        ]
+      },
+      {
+        "claim": "Fraud Policy R4. No reply within 24 hours — applied here because no reply within 24 hours",
+        "source": "document",
+        "ref": "doc:POL-R4#R4",
+        "entity_ids": [
+          "POL-R4"
+        ]
+      },
+      {
+        "claim": "Fraud Policy §3a. A case is not a report — applied here because 3a: no report. exposure $292.36 is at or below $1,000; the activity connects to no shared device profile, region cluster or other customer's fraud.",
+        "source": "document",
+        "ref": "doc:POL-3A#3a",
+        "entity_ids": [
+          "POL-3A"
+        ]
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-1462",
+      "CC-4160",
+      "CC-4389",
+      "CC-3484",
+      "CC-1432",
+      "CC-2315"
+    ],
+    "summary": "The evidence shows a card-not-present online purchase that is unusual for this card and customer. The amount is far above the card's prior mean, has never been seen near this level before, and the card's match flags are all true, which pushes the case toward fraud. The prior confirmed fraud case on this card/customer also involved unrecognized online activity, while the cleared cases were travel-related and do not explain this transaction.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-HHG-002"
+  },
+  "evidence_requests": [
+    {
+      "type": "customer_validation",
+      "asked_after_step": 7,
+      "assumed_response": "No reply from the customer within 24 hours. The evidence supports neither reading strongly enough to assume one."
+    }
+  ],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: a case is opened once fraud probability reaches 0.30 (assessed 0.75) or evidence has been requested"
+      }
+    ],
+    "final": [
+      {
+        "action": "MONITOR_CARD",
+        "route": "auto",
+        "reason": "R4: no reply within 24 hours"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: a case is opened once fraud probability reaches 0.30 (assessed 0.75) or evidence has been requested"
+      }
+    ],
+    "what_changed": "The final recommendation remained no report because the exposure was only $292.36 and the activity did not connect to any shared device profile, region cluster, or other customer's fraud. The evidence request produced no reply within 24 hours, which supported monitoring but did not change the no-report outcome."
+  },
+  "sar": {
+    "file": false,
+    "reason": "3a: no report. exposure $292.36 is at or below $1,000; the activity connects to no shared device profile, region cluster or other customer's fraud.",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0.0,
+    "activity_dates": []
+  },
+  "stop_reason": "Stopped under policy 3a: no report, because exposure $292.36 is at or below $1,000 and the activity connects to no shared device profile, region cluster, or other customer's fraud.",
+  "tool_calls": 13,
+  "tokens": 5834,
+  "latency_s": 13.31
+}

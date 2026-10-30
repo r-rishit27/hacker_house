@@ -1,0 +1,80 @@
+# Amplify Hosting's build spec for the console.
+#
+# The repository holds a Python backend and a Next app, so this is the monorepo
+# form: `appRoot: frontend` makes Amplify run everything below from there.
+# Point the Amplify app at this file's repository and set the app's build
+# settings to "use amplify.yml from the repository".
+#
+# The console is deployed as a Next.js SSR app (Amplify calls the platform
+# WEB_COMPUTE), not a static export. That is a deliberate choice for one
+# route: /cases/[caseId] is a deep link an analyst pastes into a chat, and a
+# static export would have to enumerate every case id at build time through
+# generateStaticParams — a build that goes stale the moment a twenty-first
+# alert exists. Everything else about the app is client-rendered against the
+# API either way.
+#
+# One environment variable has to be set in the Amplify console, under
+# App settings ▸ Environment variables:
+#
+#   NEXT_PUBLIC_API_BASE = https://api.example.com
+#
+# It must be https, it must have no trailing slash, and it must be the same
+# hostname the EC2 box's certificate was issued for. The `NEXT_PUBLIC_` prefix
+# means Next inlines it into the client bundle at build time — so changing it
+# requires a redeploy, not a restart, and a wrong value is baked in rather
+# than reported.
+
+version: 1
+applications:
+  - appRoot: frontend
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            # Fail here, loudly, rather than shipping a bundle that points at
+            # localhost. Without the variable the client falls back to
+            # http://127.0.0.1:8000, which in a browser on someone else's
+            # machine is a connection refused with no explanation on screen.
+            - |
+              if [ -z "${NEXT_PUBLIC_API_BASE}" ]; then
+                echo "NEXT_PUBLIC_API_BASE is not set."
+                echo "Set it in App settings > Environment variables to the API's"
+                echo "https origin, e.g. https://api.example.com — no trailing slash."
+                exit 1
+              fi
+            - |
+              case "${NEXT_PUBLIC_API_BASE}" in
+                https://*) : ;;
+                *)
+                  echo "NEXT_PUBLIC_API_BASE is '${NEXT_PUBLIC_API_BASE}', which is not https."
+                  echo "Amplify serves this console over https, and a browser blocks an"
+                  echo "http call from an https page as mixed content before it is sent."
+                  exit 1 ;;
+              esac
+            # Next 15 needs Node 18.18+. The Amplify image ships several; ask
+            # for the one this was built against rather than inheriting
+            # whichever the image defaults to this month.
+            - nvm use 20 || nvm install 20
+            - node --version
+            # `ci`, not `install`: package-lock.json is committed and a deploy
+            # that quietly resolves a different tree than the one tested is
+            # not a deploy, it is a guess.
+            - npm ci
+        build:
+          commands:
+            # The build already fails on a type error — next.config.ts sets
+            # typescript.ignoreBuildErrors to false — but running tsc first
+            # puts the error in its own step, where the log is readable.
+            - npm run typecheck
+            - npm run build
+      artifacts:
+        baseDirectory: .next
+        files:
+          - '**/*'
+      cache:
+        paths:
+          # node_modules for install time; .next/cache for Next's compiler and
+          # image caches, which is most of the difference between a 4-minute
+          # build and a 90-second one.
+          - node_modules/**/*
+          - .next/cache/**/*

@@ -1,0 +1,147 @@
+// Sentinel v3 (Round 2): the read surface of the typology detectors.
+//
+// sentinel/typologies/ asks six questions of the transaction graph. Each is a
+// traversal here, so the decision layer reads TigerGraph — the graph is the
+// source of truth — and the local DuckDB lab is only a backtest mirror of it.
+// Facts, not verdicts: no threshold below decides anything.
+//
+//   ty_card_txns           a card's transactions before as-of      Card -MADE-> Transaction
+//   ty_device_txns         a device profile's transactions          DeviceProfile -DEVICE_USED_BY-> Transaction
+//   ty_recipient_txns      transactions paying one e-mail recipient EmailDomain -R_EMAIL_OF-> Transaction
+//   ty_band_txns           every transaction in an amount band      Transaction (scan, amount + time filter)
+//   ty_cards_closed_cases  closed cases on a set of cards           Card -CARD_IN_CC-> ClosedCase
+//   ty_cleared_like        cleared cases whose notes say a phrase   ClosedCase (scan, LIKE)
+//
+// Installed by: python scripts/install_queries.py --file queries/sentinel_queries_v3.gsql
+
+CREATE OR REPLACE QUERY ty_card_txns(VERTEX<Card> c_in, DATETIME until)
+  FOR GRAPH @GRAPHNAME@ SYNTAX v1 {
+  S = {c_in};
+  T = SELECT t FROM S:c -(MADE)-> Transaction:t WHERE t.ts < until;
+  PRINT T[T.txn_id, T.card_id, T.customer_id, T.ts, T.amt, T.product, T.channel, T.addr1,
+          T.p_email, T.r_email, T.device_key, T.device_new, T.proxy_flag, T.risk_score];
+}
+
+CREATE OR REPLACE QUERY ty_device_txns(VERTEX<DeviceProfile> d_in, DATETIME since, DATETIME until)
+  FOR GRAPH @GRAPHNAME@ SYNTAX v1 {
+  S = {d_in};
+  T = SELECT t FROM S:d -(DEVICE_USED_BY)-> Transaction:t WHERE t.ts >= since AND t.ts < until;
+  PRINT T[T.txn_id, T.card_id, T.customer_id, T.ts, T.amt, T.product, T.channel, T.addr1,
+          T.p_email, T.r_email, T.device_key, T.device_new, T.proxy_flag, T.risk_score];
+}
+
+CREATE OR REPLACE QUERY ty_recipient_txns(VERTEX<EmailDomain> e_in, DATETIME since, DATETIME until)
+  FOR GRAPH @GRAPHNAME@ SYNTAX v1 {
+  S = {e_in};
+  T = SELECT t FROM S:e -(R_EMAIL_OF)-> Transaction:t WHERE t.ts >= since AND t.ts < until;
+  PRINT T[T.txn_id, T.card_id, T.customer_id, T.ts, T.amt, T.product, T.channel, T.addr1,
+          T.p_email, T.r_email, T.device_key, T.device_new, T.proxy_flag, T.risk_score];
+}
+
+CREATE OR REPLACE QUERY ty_band_txns(DOUBLE lo, DOUBLE hi, DATETIME since, DATETIME until)
+  FOR GRAPH @GRAPHNAME@ SYNTAX v1 {
+  S = {Transaction.*};
+  T = SELECT t FROM S:t WHERE t.amt >= lo AND t.amt < hi AND t.ts >= since AND t.ts < until;
+  PRINT T[T.txn_id, T.card_id, T.customer_id, T.ts, T.amt, T.product, T.channel, T.addr1,
+          T.p_email, T.r_email, T.device_key, T.device_new, T.proxy_flag, T.risk_score];
+}
+
+CREATE OR REPLACE QUERY ty_cards_closed_cases(SET<VERTEX<Card>> cards, DATETIME before)
+  FOR GRAPH @GRAPHNAME@ SYNTAX v1 {
+  S = cards;
+  C = SELECT cc FROM S:c -(CARD_IN_CC)-> ClosedCase:cc WHERE cc.closed_at < before;
+  PRINT C[C.case_id, C.card_id, C.opened_at, C.outcome, C.pattern, C.exposure_usd, C.analyst_notes];
+}
+
+CREATE OR REPLACE QUERY ty_cleared_like(STRING phrase, DATETIME before, INT k)
+  FOR GRAPH @GRAPHNAME@ SYNTAX v1 {
+  S = {ClosedCase.*};
+  C = SELECT cc FROM S:cc
+      WHERE cc.outcome == "cleared" AND cc.closed_at < before AND cc.analyst_notes LIKE phrase
+      ORDER BY cc.opened_at DESC LIMIT k;
+  PRINT C[C.case_id, C.opened_at, C.analyst_notes];
+}
+
+// Precedent on the card itself: cases opened on it, and cases that named it as a
+// connected card (CC_CONNECTED_TO, read in reverse).
+CREATE OR REPLACE QUERY ty_card_prior_cases(VERTEX<Card> c_in, DATETIME before)
+  FOR GRAPH @GRAPHNAME@ SYNTAX v1 {
+  S = {c_in};
+  A = SELECT cc FROM S:c -(CARD_IN_CC)-> ClosedCase:cc WHERE cc.closed_at < before;
+  B = SELECT cc FROM S:c -(CC_CONNECTS)-> ClosedCase:cc WHERE cc.closed_at < before;
+  C = A UNION B;
+  PRINT C[C.case_id, C.card_id, C.opened_at, C.outcome, C.pattern, C.exposure_usd];
+  // Sentinel's own earlier cases on this card: the memory the write-back creates.
+  F = SELECT f FROM S:c -(CARD_IN_CASE)-> FraudCase:f WHERE f.created_at < before;
+  PRINT F[F.case_id, F.card_id, F.created_at, F.verdict, F.pattern, F.exposure_usd];
+}
+
+// Connected components of the anonymous-proxy card–device graph (label propagation).
+// Cards and device profiles are joined through online transactions made behind an
+// anonymous proxy inside [since, until). Each card starts with its own id as label;
+// labels flow card -> transaction -> device -> transaction -> card, keeping the
+// minimum, for max_iter rounds. Cards sharing a label are one ring candidate.
+// Restricting to proxied traffic is what keeps components meaningful: over all
+// devices, two hops already join most of the graph (exploration/rings.md).
+CREATE OR REPLACE QUERY ty_proxy_components(DATETIME since, DATETIME until, INT max_device_cards, INT max_iter)
+  FOR GRAPH @GRAPHNAME@ SYNTAX v1 {
+  MinAccum<STRING> @cc;
+  OrAccum @inwin;
+  MapAccum<STRING, SetAccum<STRING>> @@cards;
+  MapAccum<STRING, SetAccum<STRING>> @@devices;
+  MapAccum<STRING, SumAccum<DOUBLE>> @@amount;
+  INT i = 0;
+  S = {Transaction.*};
+  T = SELECT t FROM S:t
+      WHERE t.ts >= since AND t.ts < until AND t.channel == "online" AND t.proxy_flag == "IP_PROXY:ANONYMOUS"
+      POST-ACCUM t.@inwin = TRUE, t.@cc = "~";
+  Cards = SELECT c FROM T:t -(MADE_BY)-> Card:c POST-ACCUM c.@cc = c.card_id;
+  // A profile on many cards bank-wide is a browser default, not a fingerprint: it may not link cards.
+  Devs = SELECT d FROM T:t -(FROM_DEVICE)-> DeviceProfile:d WHERE d.n_cards <= max_device_cards POST-ACCUM d.@cc = "~";
+  WHILE i < max_iter DO
+    Xa = SELECT t FROM Cards:c -(MADE)-> Transaction:t WHERE t.@inwin ACCUM t.@cc += c.@cc;
+    Xb = SELECT d FROM T:t -(FROM_DEVICE)-> DeviceProfile:d WHERE d.n_cards <= max_device_cards ACCUM d.@cc += t.@cc;
+    Xc = SELECT t FROM Devs:d -(DEVICE_USED_BY)-> Transaction:t WHERE t.@inwin ACCUM t.@cc += d.@cc;
+    Xd = SELECT c FROM T:t -(MADE_BY)-> Card:c ACCUM c.@cc += t.@cc;
+    i = i + 1;
+  END;
+  Ye = SELECT c FROM Cards:c POST-ACCUM @@cards += (c.@cc -> c.card_id);
+  Yf = SELECT d FROM Devs:d POST-ACCUM @@devices += (d.@cc -> d.device_key);
+  Yg = SELECT t FROM T:t POST-ACCUM @@amount += (t.@cc -> t.amt);
+  PRINT @@cards AS cards, @@devices AS devices, @@amount AS amount;
+}
+
+// How many cards used a device before as-of, and how many of them the bank tied to
+// confirmed fraud through it: the card of a confirmed case whose transactions used the
+// device, or a card that case named as connected (rings are recorded that way).
+CREATE OR REPLACE QUERY ty_device_fraud_history(VERTEX<DeviceProfile> d_in, DATETIME before)
+  FOR GRAPH @GRAPHNAME@ SYNTAX v1 {
+  SetAccum<STRING> @@cards;
+  SetAccum<STRING> @@tied;
+  S = {d_in};
+  T = SELECT t FROM S:d -(DEVICE_USED_BY)-> Transaction:t WHERE t.ts < before ACCUM @@cards += t.card_id;
+  C = SELECT cc FROM T:t -(TXN_IN_CC)-> ClosedCase:cc
+      WHERE cc.outcome == "confirmed_fraud" AND cc.closed_at < before ACCUM @@tied += cc.card_id;
+  K = SELECT k FROM C:cc -(CC_CONNECTED_TO)-> Card:k ACCUM @@tied += k.card_id;
+  SetAccum<STRING> @@both;
+  @@both = @@cards INTERSECT @@tied;
+  PRINT @@cards.size() AS n_cards, @@both.size() AS n_fraud_cards;
+}
+
+// Batch read for one investigation: for a set of device profiles, every transaction in
+// [since, until) and the number of distinct cards that used each one before until.
+// Replaces one ty_device_txns round trip per device (360 on a 10,306-transaction card).
+CREATE OR REPLACE QUERY ty_devices_batch(SET<VERTEX<DeviceProfile>> ds, DATETIME since, DATETIME until)
+  FOR GRAPH @GRAPHNAME@ SYNTAX v1 {
+  MapAccum<STRING, SetAccum<STRING>> @@cards;
+  S = ds;
+  T = SELECT t FROM S:d -(DEVICE_USED_BY)-> Transaction:t WHERE t.ts < until
+      ACCUM @@cards += (d.device_key -> t.card_id);
+  W = SELECT t FROM T:t WHERE t.ts >= since;
+  PRINT W[W.txn_id, W.card_id, W.customer_id, W.ts, W.amt, W.product, W.channel, W.addr1,
+          W.p_email, W.r_email, W.device_key, W.device_new, W.proxy_flag, W.risk_score] AS W;
+  MapAccum<STRING, INT> @@n;
+  FOREACH (k, v) IN @@cards DO @@n += (k -> v.size()); END;
+  PRINT @@n AS n_cards;
+  PRINT @@cards AS cards;
+}

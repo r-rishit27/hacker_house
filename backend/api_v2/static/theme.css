@@ -1,0 +1,68 @@
+/* Sentinel theme for the v2 pages — the main console's tokens (frontend/src/app/tokens.css),
+   copied value for value so the portal, the sign-in page and the regulator's view read as one
+   product. Warm paper, ink, one orange for chrome. Hue is meaning:
+     accent  orange  chrome, the live agent        danger  red     fraud · L2 · block
+     success green   legitimate · auto · cleared   warning purple  uncertain · L1 · awaiting a person
+     info    blue    a document, a prior case      txn     taupe   a transaction
+   The console is a light instrument; these pages are too. */
+:root {
+  --bg: #f7f4ef; --surface: #ffffff; --surface-2: #f6f2ec; --surface-3: #f2ede5;
+  --border: #e8e2d9; --border-strong: #978a78;
+  --fg: #1d1813; --fg-muted: #6d645b; --fg-subtle: #736a61;
+  --accent: #b54a09; --accent-tint: #fff1e4; --accent-contrast: #ffffff; --accent-bold: #f26a1b;
+  --danger: #cc2b4e; --danger-tint: #fce9ed; --danger-contrast: #ffffff;
+  --success: #2e7d5b; --success-tint: #e6f4ec; --success-contrast: #ffffff;
+  --warning: #7b5ea7; --warning-tint: #f2ecfa; --warning-contrast: #ffffff;
+  --info: #2f6bb5; --info-tint: #eef3fa;
+  --authority: #7b5ea7; --authority-tint: #f5f0fb;
+  --txn: #837869; --meter-0: #2e7d5b; --meter-1: #7d8a4a; --meter-2: #7b5ea7; --meter-3: #cc2b4e; --meter-track: #ece6dd;
+  --radius-sm: 5px; --radius-md: 7px; --radius-lg: 10px; --radius-full: 9999px;
+  --elev-1: 0 1px 2px rgb(60 42 26 / 0.07), 0 1px 1px rgb(60 42 26 / 0.04);
+  --elev-2: 0 4px 12px rgb(60 42 26 / 0.1), 0 1px 3px rgb(60 42 26 / 0.06);
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font: 14px/1.5 var(--font-sans); margin: 0 }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+button, input, select, textarea { font: inherit; color: inherit }
+button { cursor: pointer }
+.mono { font-family: var(--font-mono); font-size: .86em }
+
+/* masthead shared by every v2 page */
+.mast { background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10 }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 11; background: var(--surface) }
+.mast-in { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; padding-block: 10px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); max-width: 1400px; margin: 0 auto }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -.01em; font-size: 1rem; text-decoration: none; color: var(--fg) }
+/* --logo is the brand mark as a data URI, set by app.themed() */
+.brand-mark { width: 26px; height: 26px; border-radius: 6px; background: var(--accent-bold) var(--logo, none) center / cover no-repeat; flex: none }
+.navlinks { display: flex; gap: 4px; flex-wrap: wrap }
+.navlinks a { padding: 6px 10px; border-radius: var(--radius-md); color: var(--fg-muted); text-decoration: none; font-weight: 500 }
+.navlinks a:hover { background: var(--surface-2); color: var(--fg) }
+.navlinks a[aria-current="page"] { background: var(--accent-tint); color: var(--accent) }
+.who { margin-left: auto; display: flex; align-items: center; gap: 10px; font-size: .86rem }
+.role-badge { padding: 2px 9px; border-radius: var(--radius-full); font-weight: 600; font-size: .74rem; letter-spacing: .02em; border: 1px solid currentColor }
+.role-analyst { color: var(--fg-muted) } .role-team_lead { color: var(--warning) } .role-fraud_manager { color: var(--danger) } .role-regulator { color: var(--info) }
+
+.btn { border: 1px solid var(--border-strong); background: var(--surface); border-radius: var(--radius-md); padding: 6px 12px; font-weight: 600; font-size: .86rem; line-height: 1.3 }
+.btn:hover { border-color: var(--accent); color: var(--accent) }
+.btn:disabled { opacity: .5; cursor: not-allowed }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast) }
+.btn.primary:hover { filter: brightness(1.08); color: var(--accent-contrast) }
+.btn.good { border-color: var(--success); color: var(--success) } .btn.good:hover { background: var(--success-tint) }
+.btn.bad { border-color: var(--danger); color: var(--danger) } .btn.bad:hover { background: var(--danger-tint) }
+.chip { display: inline-block; padding: 1px 8px; border-radius: var(--radius-full); font-weight: 600; font-size: .74rem; line-height: 1.6; white-space: nowrap }
+.v-fraud { background: var(--danger-tint); color: var(--danger) } .v-legitimate { background: var(--success-tint); color: var(--success) }
+.v-uncertain { background: var(--warning-tint); color: var(--warning) } .v-failed { background: var(--danger); color: var(--danger-contrast) }
+.v-none { background: var(--surface-3); color: var(--fg-muted) }
+.route { font-family: var(--font-mono); font-size: .74rem; border-radius: 4px; padding: 0 6px; font-weight: 500 }
+.route-auto { background: var(--success-tint); color: var(--success) } .route-L1 { background: var(--warning-tint); color: var(--warning) }
+.route-L2 { background: var(--danger-tint); color: var(--danger) }
+.eyebrow { font-weight: 600; font-size: .7rem; letter-spacing: .1em; text-transform: uppercase; color: var(--fg-subtle) }
+.muted { color: var(--fg-muted) }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--elev-1) }
+.notice { padding: 10px 12px; border-radius: var(--radius-md); background: var(--surface-2); border: 1px solid var(--border); font-size: .88rem }
+.notice.err { background: var(--danger-tint); border-color: var(--danger); color: var(--danger) }
+.notice.ok { background: var(--success-tint); border-color: var(--success); color: var(--success) }

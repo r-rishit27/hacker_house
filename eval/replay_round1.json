@@ -1,0 +1,240 @@
+{
+ "score": {
+  "correct": 16,
+  "uncertain": 3,
+  "wrong": 1,
+  "harmed_legit": 0
+ },
+ "cases": [
+  {
+   "case": "HHG-001",
+   "truth": "legitimate",
+   "verdict": "legitimate",
+   "p": 0.08,
+   "pattern": "none",
+   "by": "explained",
+   "unexplained": [],
+   "model": null
+  },
+  {
+   "case": "HHG-002",
+   "truth": "legitimate",
+   "verdict": "legitimate",
+   "p": 0.08,
+   "pattern": "none",
+   "by": "explained",
+   "unexplained": [],
+   "model": null
+  },
+  {
+   "case": "HHG-003",
+   "truth": "fraud",
+   "verdict": "fraud",
+   "p": 0.85,
+   "pattern": "out_of_region_use",
+   "by": "rule_R2",
+   "unexplained": [],
+   "model": null
+  },
+  {
+   "case": "HHG-004",
+   "truth": "legitimate",
+   "verdict": "legitimate",
+   "p": 0.25,
+   "pattern": "none",
+   "by": "rule_R7",
+   "unexplained": [
+    "device_new: device Ddea148c23d58 not seen on this card before"
+   ],
+   "model": null
+  },
+  {
+   "case": "HHG-005",
+   "truth": "legitimate",
+   "verdict": "legitimate",
+   "p": 0.15,
+   "pattern": "none",
+   "by": "rule_R1_weak_single",
+   "unexplained": [
+    "device_new: device D487703f7a871 not seen on this card before",
+    "email_new: purchaser e-mail icloud.com not used on this card before"
+   ],
+   "model": null
+  },
+  {
+   "case": "HHG-006",
+   "truth": "fraud",
+   "verdict": "fraud",
+   "p": 0.97,
+   "pattern": "undocumented",
+   "by": "typology",
+   "unexplained": [
+    "device_new: device D4936ab359677 not seen on this card before",
+    "amount_high: $482.12 vs median $62.93, p95 $456.96",
+    "product_new: product C is 2% of the card's history"
+   ],
+   "model": null
+  },
+  {
+   "case": "HHG-007",
+   "truth": "fraud",
+   "verdict": "legitimate",
+   "p": 0.08,
+   "pattern": "none",
+   "by": "explained",
+   "unexplained": [],
+   "model": null
+  },
+  {
+   "case": "HHG-008",
+   "truth": "fraud",
+   "verdict": "fraud",
+   "p": 0.85,
+   "pattern": "card_not_present_fraud",
+   "by": "rule_R2",
+   "unexplained": [],
+   "model": null
+  },
+  {
+   "case": "HHG-009",
+   "truth": "fraud",
+   "verdict": "fraud",
+   "p": 0.85,
+   "pattern": "card_not_present_fraud",
+   "by": "rule_R2",
+   "unexplained": [],
+   "model": null
+  },
+  {
+   "case": "HHG-010",
+   "truth": "legitimate",
+   "verdict": "legitimate",
+   "p": 0.15,
+   "pattern": "none",
+   "by": "rule_R1_weak_single",
+   "unexplained": [
+    "device_new: device D0e83f0a61762 not seen on this card before"
+   ],
+   "model": null
+  },
+  {
+   "case": "HHG-011",
+   "truth": "fraud",
+   "verdict": "fraud",
+   "p": 0.85,
+   "pattern": "card_not_present_new_device",
+   "by": "rule_R2",
+   "unexplained": [
+    "device_new: device D0d76295a5b1a not seen on this card before"
+   ],
+   "model": null
+  },
+  {
+   "case": "HHG-012",
+   "truth": "legitimate",
+   "verdict": "legitimate",
+   "p": 0.08,
+   "pattern": "none",
+   "by": "explained",
+   "unexplained": [],
+   "model": null
+  },
+  {
+   "case": "HHG-013",
+   "truth": "legitimate",
+   "verdict": "legitimate",
+   "p": 0.15,
+   "pattern": "none",
+   "by": "rule_R1_weak_single",
+   "unexplained": [
+    "device_new: device D5b92afa0ae36 not seen on this card before",
+    "product_new: product C is 0% of the card's history"
+   ],
+   "model": null
+  },
+  {
+   "case": "HHG-014",
+   "truth": "fraud",
+   "verdict": "fraud",
+   "p": 0.97,
+   "pattern": "undocumented",
+   "by": "typology",
+   "unexplained": [
+    "device_new: device D2c2006f554c8 not seen on this card before",
+    "proxy: identity record shows IP_PROXY:ANONYMOUS",
+    "product_new: product C is 1% of the card's history"
+   ],
+   "model": null
+  },
+  {
+   "case": "HHG-015",
+   "truth": "legitimate",
+   "verdict": "uncertain",
+   "p": 0.5,
+   "pattern": "none",
+   "by": "model_failed_closed",
+   "unexplained": [
+    "device_new: device Dfb7207e8ccbe not seen on this card before",
+    "region_new: billing region 327.0 new to the card"
+   ],
+   "model": null
+  },
+  {
+   "case": "HHG-016",
+   "truth": "fraud",
+   "verdict": "fraud",
+   "p": 0.85,
+   "pattern": "card_not_present_fraud",
+   "by": "rule_R2",
+   "unexplained": [],
+   "model": null
+  },
+  {
+   "case": "HHG-017",
+   "truth": "legitimate",
+   "verdict": "uncertain",
+   "p": 0.5,
+   "pattern": "none",
+   "by": "model_failed_closed",
+   "unexplained": [
+    "proxy: identity record shows IP_PROXY:HIDDEN"
+   ],
+   "model": null
+  },
+  {
+   "case": "HHG-018",
+   "truth": "fraud",
+   "verdict": "fraud",
+   "p": 0.85,
+   "pattern": "out_of_region_use",
+   "by": "rule_R2",
+   "unexplained": [],
+   "model": null
+  },
+  {
+   "case": "HHG-019",
+   "truth": "fraud",
+   "verdict": "uncertain",
+   "p": 0.5,
+   "pattern": "none",
+   "by": "model_failed_closed",
+   "unexplained": [
+    "device_new: device Df194716e2447 not seen on this card before"
+   ],
+   "model": null
+  },
+  {
+   "case": "HHG-020",
+   "truth": "legitimate",
+   "verdict": "legitimate",
+   "p": 0.15,
+   "pattern": "none",
+   "by": "rule_R1_weak_single",
+   "unexplained": [
+    "device_new: device D052dae2f461a not seen on this card before",
+    "product_new: product R is 0% of the card's history"
+   ],
+   "model": null
+  }
+ ]
+}

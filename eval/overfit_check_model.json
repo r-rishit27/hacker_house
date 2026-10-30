@@ -1,0 +1,82 @@
+{
+ "model": true,
+ "replay": {
+  "correct": 17,
+  "harmed": 0,
+  "wrong": 1,
+  "uncertain": 2
+ },
+ "cleared": {
+  "n": 80,
+  "fraud": 4,
+  "uncertain": 45,
+  "legitimate": 31,
+  "innocent_called_fraud": 0.05
+ },
+ "frauds_as_reports": {
+  "fraud": 79,
+  "legitimate": 1
+ },
+ "january": {
+  "card-present look-alikes": {
+   "expect": "legitimate",
+   "legitimate": 8
+  },
+  "new device + anonymous proxy": {
+   "expect": "fraud",
+   "fraud": 11,
+   "uncertain": 3
+  },
+  "escalation / dormant": {
+   "expect": "fraud",
+   "legitimate": 1,
+   "fraud": 7
+  },
+  "micro charges": {
+   "expect": "fraud",
+   "fraud": 18
+  },
+  "one recipient": {
+   "expect": "fraud",
+   "fraud": 12
+  },
+  "weekly subscriptions": {
+   "expect": "legitimate",
+   "legitimate": 3
+  },
+  "usual-amount look-alikes": {
+   "expect": "legitimate",
+   "legitimate": 10
+  },
+  "card testing": {
+   "expect": "fraud",
+   "fraud": 1
+  }
+ },
+ "ablation": {
+  "R1_weak_single": {
+   "correct": 13,
+   "harmed": 0,
+   "uncertain": 6,
+   "wrong": 1
+  },
+  "R7": {
+   "correct": 16,
+   "harmed": 1,
+   "wrong": 2,
+   "uncertain": 2
+  },
+  "new_to_bank": {
+   "correct": 17,
+   "harmed": 0,
+   "wrong": 1,
+   "uncertain": 2
+  },
+  "very_low": {
+   "correct": 16,
+   "harmed": 0,
+   "wrong": 1,
+   "uncertain": 3
+  }
+ }
+}

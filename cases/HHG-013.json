@@ -1,0 +1,212 @@
+{
+  "case_id": "HHG-013",
+  "case": {
+    "status": "open",
+    "verdict": "uncertain",
+    "fraud_probability": 0.7903,
+    "pattern": "card_not_present_new_device",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3526826"
+    ],
+    "first_suspicious_txn_id": "3526826",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 35.66,
+    "evidence": [
+      {
+        "claim": "The bank's model scored this transaction 0.76, in its second-highest band.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3526826)",
+        "entity_ids": [
+          "3526826"
+        ]
+      },
+      {
+        "claim": "The purchase was made online, without the card present.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3526826)",
+        "entity_ids": [
+          "3526826"
+        ]
+      },
+      {
+        "claim": "The amount is $35.66, under the $500 band.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3526826)",
+        "entity_ids": [
+          "3526826"
+        ]
+      },
+      {
+        "claim": "The amount is $35.66, not the sub-$5 size a probe authorisation uses.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3526826)",
+        "entity_ids": [
+          "3526826"
+        ]
+      },
+      {
+        "claim": "Every one of the card's unnamed match flags (M1-M9) is true.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3526826)",
+        "entity_ids": [
+          "3526826"
+        ]
+      },
+      {
+        "claim": "The transaction carries no distance value (an unnamed Vesta field).",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3526826)",
+        "entity_ids": [
+          "3526826"
+        ]
+      },
+      {
+        "claim": "The identity record marks this device as new for the account.",
+        "source": "graph",
+        "ref": "query:device_novelty(txn_id=3526826)",
+        "entity_ids": [
+          "3526826",
+          "D5b92afa0ae36"
+        ]
+      },
+      {
+        "claim": "The identity record does not carry the 'Found' device state.",
+        "source": "graph",
+        "ref": "query:device_novelty(txn_id=3526826)",
+        "entity_ids": [
+          "3526826",
+          "D5b92afa0ae36"
+        ]
+      },
+      {
+        "claim": "No proxy was recorded on the connection.",
+        "source": "graph",
+        "ref": "query:device_novelty(txn_id=3526826)",
+        "entity_ids": [
+          "3526826",
+          "D5b92afa0ae36"
+        ]
+      },
+      {
+        "claim": "This card has never been used on this device before.",
+        "source": "graph",
+        "ref": "query:device_novelty(txn_id=3526826)",
+        "entity_ids": [
+          "3526826",
+          "D5b92afa0ae36"
+        ]
+      },
+      {
+        "claim": "The card has 1 prior purchases of product code C.",
+        "source": "graph",
+        "ref": "query:product_novelty(card_id=C07671-K2, product=C, as_of=2016-12-09 02:39:29)",
+        "entity_ids": [
+          "C07671-K2"
+        ]
+      },
+      {
+        "claim": "The previous transaction on this card was 35 minutes earlier.",
+        "source": "graph",
+        "ref": "query:txn_sequence_context(txn_id=3526826)",
+        "entity_ids": [
+          "3526826"
+        ]
+      },
+      {
+        "claim": "The previous transaction was more than ten minutes earlier.",
+        "source": "graph",
+        "ref": "query:txn_sequence_context(txn_id=3526826)",
+        "entity_ids": [
+          "3526826"
+        ]
+      },
+      {
+        "claim": "35 prior charges on this card fall within $0.50 of $35.66.",
+        "source": "graph",
+        "ref": "query:amount_band_probe(card_id=C07671-K2, amt=35.66, tol=0.5, as_of=2016-12-09 02:39:29)",
+        "entity_ids": [
+          "C07671-K2"
+        ]
+      },
+      {
+        "claim": "$35.66 is below this card's own prior mean of $114.31.",
+        "source": "graph",
+        "ref": "query:amount_band_probe(card_id=C07671-K2, amt=35.66, tol=0.5, as_of=2016-12-09 02:39:29)",
+        "entity_ids": [
+          "C07671-K2"
+        ]
+      },
+      {
+        "claim": "$35.66 is within two standard deviations of this card's prior mean ($543.18).",
+        "source": "graph",
+        "ref": "query:amount_band_probe(card_id=C07671-K2, amt=35.66, tol=0.5, as_of=2016-12-09 02:39:29)",
+        "entity_ids": [
+          "C07671-K2"
+        ]
+      },
+      {
+        "claim": "A step-up authentication challenge went uncompleted on an unrecognised device.",
+        "source": "customer",
+        "ref": "evidence_request:1",
+        "entity_ids": []
+      },
+      {
+        "claim": "Fraud Policy §3a. A case is not a report — applied here because 3a: no report. exposure $35.66 is at or below $1,000; the activity connects to no shared device profile, region cluster or other customer's fraud.",
+        "source": "document",
+        "ref": "doc:POL-3A#3a",
+        "entity_ids": [
+          "POL-3A"
+        ]
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-3216",
+      "CC-3602",
+      "CC-1475",
+      "CC-4397",
+      "CC-3761",
+      "CC-4819"
+    ],
+    "summary": "The evidence shows an online card-not-present purchase on a device marked new for this account, with every one of the unnamed match flags true and no proxy recorded. That combination is consistent with card-not-present fraud from a new device, but it is not proof by itself because the amount is $35.66 and there are legitimate-looking features such as prior activity at similar amounts and a 35 minute gap from the previous transaction. The history also includes prior confirmed fraud on this card and prior cleared alerts where the cardholder said a new phone was theirs, so the device signal is important but not decisive on its own.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-HHG-013"
+  },
+  "evidence_requests": [
+    {
+      "type": "step_up_auth",
+      "asked_after_step": 7,
+      "assumed_response": "Step-up challenge not completed: no response to the one-time passcode."
+    }
+  ],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: a case is opened once fraud probability reaches 0.30 (assessed 0.56) or evidence has been requested"
+      }
+    ],
+    "final": [
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "3a: a case is opened once fraud probability reaches 0.30 (assessed 0.79) or evidence has been requested"
+      }
+    ],
+    "what_changed": "The final recommendation remained no report; the higher fraud score and uncompleted step-up challenge did not overcome the policy threshold because the exposure stayed at $35.66 and there was no shared device profile, region cluster, or other customer fraud connection."
+  },
+  "sar": {
+    "file": false,
+    "reason": "3a: no report. exposure $35.66 is at or below $1,000; the activity connects to no shared device profile, region cluster or other customer's fraud.",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0.0,
+    "activity_dates": []
+  },
+  "stop_reason": "Investigation ended under policy 3a: no report, because exposure $35.66 is at or below $1,000 and the activity connects to no shared device profile, region cluster, or other customer's fraud.",
+  "tool_calls": 13,
+  "tokens": 6894,
+  "latency_s": 19.24
+}

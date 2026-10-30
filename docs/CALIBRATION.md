@@ -5,8 +5,8 @@ Most submissions will ask a model "how likely is this fraud, 0 to 1?" and get
 likelihood ratios fitted on the bank's own closed cases.
 
 ```
-python -m eval.fit_elt          # writes sentinel/elt.json
-python -m pytest tests/         # 40 tests over the ledger and the policy
+python -m eval.fit_elt                         # writes backend/sentinel/evidence/elt.json
+cd backend && python -m pytest tests/unit -q   # 292 tests over the ledger and the policy
 ```
 
 ## The finding that shaped the whole design
@@ -60,11 +60,13 @@ The risk-score buckets now behave like a proper reliability curve:
 | 0.70–0.85 | 8.22 | 17.6% | 2.1% |
 | ≥ 0.85 | **18.76** | 8.7% | 0.5% |
 
-Monotone, which is the sanity check that the earlier fit failed. Note this does
-not contradict the README's "above 0.7, most flagged transactions turn out to be
-legitimate" — an LR of 18.76 against a low prior still lands well under 50%.
-Discrimination and base rate are different things, and separating them is the
-whole point.
+Monotone, which is the sanity check that the earlier fit failed. These are the
+*discrimination* of the score, measured against other transactions on the same
+cards. They are not the posterior for an alert, and reading them as one is the
+error corrected below — 18.76 against a prior of 0.25 gives 0.86, which is
+exactly the collision with Guide.md's "above 0.7, most flagged transactions
+turn out to be legitimate". Discrimination and base rate are different things,
+and separating them is the whole point.
 
 **2. How suspicious is the alert, given how it arrived?** That is the prior, and
 it is stated rather than smuggled into the ratios. The historical rates are
@@ -88,9 +90,76 @@ overridden to match intuition.
 4,665 confirmed cases, so novelty is not the dominant fraud signature here even
 though it is one of the five documented patterns.
 
+## Two corrections the benchmark run exposed
+
+The fit above is sound. Applying it was not, in two places, and both were found
+by decomposing the twenty answer files by evidence group rather than by reading
+the code.
+
+### The score was counted twice on the alerts the score raised
+
+Thirteen of twenty came back `fraud`, and eight of those thirteen were
+score-triggered cases carried past 0.85 by the risk band alone. Guide.md says
+plainly that **"above 0.7, most flagged transactions turn out to be
+legitimate"**, so a score of 0.79 reaching 0.86 on its own is the brief's own
+base rate contradicted.
+
+The cause is structural. A `risk_score` alert exists *because* the model scored
+it high. The trigger prior of 0.25 is P(fraud | the model raised this alert) —
+it has already spent that fact. Posting the band's own ratio on top spends it
+again, and the ratios are not small: 8.22 for 0.70–0.85, 18.76 above it.
+
+The band is not discarded, because *how far above the alerting threshold* a
+score sits is real information. It is re-centred on the band the alert itself
+implies. The 900 cleared alerts are 100% at or above 0.70, mean 0.881, so
+0.70–0.85 is what "the model raised an alert" is worth:
+
+| band | fitted LR | on a score-triggered alert | reading |
+|---|---|---|---|
+| 0.30–0.50 | 2.48 | **0.30** | the model was reaching |
+| 0.50–0.70 | 5.45 | **0.66** | below what an alert implies |
+| 0.70–0.85 | 8.22 | **1.00** | exactly what the prior already said |
+| ≥ 0.85 | 18.76 | **2.28** | above the threshold, and that counts |
+
+A customer report or an analyst request is unaffected: that alert did not come
+from the model, so the model's score is independent information and its full
+ratio applies. Nine of the twenty alerts carry no score at all.
+
+### Four groups held one observation
+
+The ledger caps correlated evidence by group, on the stated principle that
+three phrasings of one finding are not three findings. The fit's own grouping
+split one finding four ways: `channel_online`, `dist1_missing`,
+`m_flags_all_true` and `device_found` are not four facts, they are four
+consequences of a transaction having happened online with an identity record.
+Vesta populates the M flags and the device record only for online
+transactions, and `dist1` is missing precisely when there is no card-present
+distance to record.
+
+Measured over the twenty: those four groups contributed **+1.84 log-odds on
+every one of the thirteen `fraud` cases and −1.45 on every one of the three
+`legitimate` cases** — a 27× swing, applied identically, for the single fact
+that a transaction was online. Merged into one `channel` group they are capped
+at ±1.2 like any other observation. The device's own signals — *this card* has
+never used *this* device — stay separate, because that is a different fact.
+
+### What changed
+
+| | before | after |
+|---|---|---|
+| verdict mix | 13 fraud · 4 uncertain · 3 legitimate | 6 fraud · 11 uncertain · 3 legitimate |
+| HHG-003 (ground truth ≈ 0.32) | 0.358 | 0.420 |
+| HHG-017 (score 0.79, no other strong signal) | 0.942 | 0.764 |
+| HHG-010 (score ≥ 0.85, corroborated) | 0.969 | 0.950 |
+
+The cases that stay `fraud` are the ones where the cardholder said outright
+that they did not make the purchase, plus the two score cases whose evidence
+stands up without the score. `uncertain` is a full-credit verdict and the
+brief's core challenge is what to do when the signals are uncertain.
+
 ## The ledger
 
-`sentinel/ledger.py` accumulates `log LR` per finding. Two rules keep it honest.
+`backend/sentinel/evidence/ledger.py` accumulates `log LR` per finding. Two rules keep it honest.
 
 **Correlated evidence is capped by group.** "New device", "device never used on
 this card" and "proxy present" are three phrasings of one observation; without a
@@ -122,9 +191,9 @@ small difference changes no verdict, no action and no SAR decision.
 
 ## The policy engine
 
-`sentinel/policy.py` is a pure function from `CaseState` to an ordered list of
+`backend/sentinel/policy/engine.py` is a pure function from `CaseState` to an ordered list of
 `(action, route, reason)`. Rules R1–R10, the action vocabulary and the routing
-table are transcribed verbatim from the policy. `tests/test_policy.py` has one
+table are transcribed verbatim from the policy. `backend/tests/unit/test_policy.py` has one
 test per rule plus the negatives — 40 tests, including:
 
 - `BLOCK_CARD` routes `L1` at $2,500.00 and `L2` at $2,500.01

@@ -1,9 +1,10 @@
 {
   "mcpServers": {
-    "tigergraph": {
-      "command": "tigergraph-mcp",
-      "args": [],
-      "env": {}
+        "sentinel-round2": {
+      "command": "python",
+      "args": [
+        "backend/api_v2/mcp_server.py"
+      ]
     }
   }
 }

@@ -1,0 +1,64 @@
+{
+ "checked_at": "2026-10-30T01:12:12",
+ "files": {
+  "transactions_2017q1.csv.gz": "c31e15f66d72844a69fdbd2f437b71f0b9aab187aee33ea7070479ca7a0a15fc",
+  "identity_2017q1.csv": "e174b0b1be53ff1c87b79ecdfdcfa4909b795fc8a3255354b422ef5b0dffce80",
+  "closed_cases_history.csv": "d8cb78464d81881b4fcc780e3dc5af83e5c9f88b3cd5f7984fb2602b16a5f7ee"
+ },
+ "transactions": {
+  "rows": 60196,
+  "columns": 397,
+  "id_range": [
+   3600001,
+   3660355
+  ]
+ },
+ "identity": {
+  "rows": 15893,
+  "columns": 41
+ },
+ "findings": [
+  {
+   "severity": "review",
+   "where": "transactions",
+   "column": "TransactionID",
+   "change": "ids no longer follow time: 50% of consecutive ids go back in time (July-December ids were time-ordered). Nothing may assume id order = time order."
+  },
+  {
+   "severity": "review",
+   "where": "closed cases",
+   "column": "*",
+   "change": "20 added (['CC-5566', 'CC-5567', 'CC-5568']..['CC-5585']) , 0 removed, 0 changed",
+   "added": [
+    "CC-5566",
+    "CC-5567",
+    "CC-5568",
+    "CC-5569",
+    "CC-5570",
+    "CC-5571",
+    "CC-5572",
+    "CC-5573",
+    "CC-5574",
+    "CC-5575",
+    "CC-5576",
+    "CC-5577",
+    "CC-5578",
+    "CC-5579",
+    "CC-5580",
+    "CC-5581",
+    "CC-5582",
+    "CC-5583",
+    "CC-5584",
+    "CC-5585"
+   ],
+   "removed": [],
+   "changed": []
+  }
+ ],
+ "remapping": {
+  "card_id": "existing (customer, card6) pairs keep their -Kn; new pairs are appended",
+  "closed_cases": "replace the Round 1 copy; HHG-001..020 become CC-5566..5585",
+  "transactions": "append January to the July-December spine; never infer time from id"
+ },
+ "report_hash": "06ec4a4a1ff2c0d0fcb1f6ad239bd7d9012bb801d4245c024e1017cd3f94d665"
+}

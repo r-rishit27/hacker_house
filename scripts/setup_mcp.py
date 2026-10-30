@@ -24,7 +24,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from sentinel import config as cfg  # noqa: E402
+from etl import config as cfg  # noqa: E402
 
 ENV_PATH = cfg.ROOT / ".env"
 MCP_JSON = cfg.ROOT / ".mcp.json"
@@ -40,10 +40,35 @@ def mint_token() -> tuple[str, str]:
     return token, expiry
 
 
+#: The only keys this script owns. Everything else in .env is hand-written and
+#: must survive a --refresh untouched.
+MANAGED_KEYS = ("TG_GRAPHNAME", "TG_GS_PORT", "TG_API_TOKEN")
+
+
+def strip_managed(text: str) -> str:
+    """Remove the managed marker and the keys it owns — and nothing else.
+
+    The previous implementation matched from the marker to the next line
+    starting with "#", or to end of file. A .env whose managed block was
+    followed by a plain `KEY=value` line and no further comment therefore lost
+    every line after the marker. It deleted a live OPENAI_API_KEY that way.
+    Deleting by key name cannot overreach.
+    """
+    kept: list[str] = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped == MANAGED_START:
+            continue
+        if any(stripped.startswith(f"{key}=") for key in MANAGED_KEYS):
+            continue
+        kept.append(line)
+    return "\n".join(kept).rstrip()
+
+
 def write_env(token: str) -> None:
     """Replace the managed block in .env, leaving the hand-written half alone."""
     text = ENV_PATH.read_text(encoding="utf-8") if ENV_PATH.exists() else ""
-    text = re.sub(re.escape(MANAGED_START) + r".*?(?=\n#|\Z)", "", text, flags=re.S).rstrip()
+    text = strip_managed(text)
 
     block = "\n".join([
         "",
@@ -58,6 +83,19 @@ def write_env(token: str) -> None:
     print(f"  .env updated (TG_GRAPHNAME, TG_GS_PORT, TG_API_TOKEN)")
 
 
+def mcp_command() -> str:
+    """The tigergraph-mcp binary, by absolute path when the venv has one.
+
+    A bare "tigergraph-mcp" only resolves when the venv happens to be on the
+    PATH of whatever process spawns the MCP client, which is not true of an
+    IDE launched from the dock. The venv path is machine-local but it is not a
+    credential, and an absolute path that works beats a relative one that
+    needs a README note.
+    """
+    local = cfg.ROOT / ".venv" / "bin" / "tigergraph-mcp"
+    return str(local) if local.exists() else "tigergraph-mcp"
+
+
 def write_mcp_json() -> None:
     """Write .mcp.json with no host and no credentials in it.
 
@@ -65,7 +103,7 @@ def write_mcp_json() -> None:
     config stays free of the workspace URL and the token. Both live in .env,
     which is gitignored.
     """
-    config = {"mcpServers": {"tigergraph": {"command": "tigergraph-mcp",
+    config = {"mcpServers": {"tigergraph": {"command": mcp_command(),
                                             "args": [], "env": {}}}}
     MCP_JSON.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
     print(f"  {MCP_JSON.name} written (host and token stay in .env)")

@@ -1,0 +1,240 @@
+{
+  "case_id": "HHG-009",
+  "case": {
+    "status": "open",
+    "verdict": "uncertain",
+    "fraud_probability": 0.5708,
+    "pattern": "card_not_present_fraud",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3581141"
+    ],
+    "first_suspicious_txn_id": "3581141",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 30.02,
+    "evidence": [
+      {
+        "claim": "The bank's model scored this transaction 0.28, in its lowest band.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3581141)",
+        "entity_ids": [
+          "3581141"
+        ]
+      },
+      {
+        "claim": "The purchase was made online, without the card present.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3581141)",
+        "entity_ids": [
+          "3581141"
+        ]
+      },
+      {
+        "claim": "The amount is $30.02, under the $500 band.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3581141)",
+        "entity_ids": [
+          "3581141"
+        ]
+      },
+      {
+        "claim": "The amount is $30.02, not the sub-$5 size a probe authorisation uses.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3581141)",
+        "entity_ids": [
+          "3581141"
+        ]
+      },
+      {
+        "claim": "The billing country is the cardholder's home country.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3581141)",
+        "entity_ids": [
+          "3581141"
+        ]
+      },
+      {
+        "claim": "Every one of the card's unnamed match flags (M1-M9) is true.",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3581141)",
+        "entity_ids": [
+          "3581141"
+        ]
+      },
+      {
+        "claim": "The transaction carries no distance value (an unnamed Vesta field).",
+        "source": "graph",
+        "ref": "query:txn_detail(txn_id=3581141)",
+        "entity_ids": [
+          "3581141"
+        ]
+      },
+      {
+        "claim": "The card has prior history.",
+        "source": "graph",
+        "ref": "query:region_novelty(card_id=C08299-K1, region=203.0, as_of=2016-12-28 12:10:53)",
+        "entity_ids": [
+          "C08299-K1",
+          "203.0"
+        ]
+      },
+      {
+        "claim": "The card had 1 prior transactions in billing region 203.0.",
+        "source": "graph",
+        "ref": "query:region_novelty(card_id=C08299-K1, region=203.0, as_of=2016-12-28 12:10:53)",
+        "entity_ids": [
+          "C08299-K1",
+          "203.0"
+        ]
+      },
+      {
+        "claim": "The card has only 1 prior transactions in billing region 203.0.",
+        "source": "graph",
+        "ref": "query:region_novelty(card_id=C08299-K1, region=203.0, as_of=2016-12-28 12:10:53)",
+        "entity_ids": [
+          "C08299-K1",
+          "203.0"
+        ]
+      },
+      {
+        "claim": "No card-present activity in another billing region within a day.",
+        "source": "graph",
+        "ref": "query:region_novelty(card_id=C08299-K1, region=203.0, as_of=2016-12-28 12:10:53)",
+        "entity_ids": [
+          "C08299-K1",
+          "203.0"
+        ]
+      },
+      {
+        "claim": "The previous transaction was 48.1 hours earlier.",
+        "source": "graph",
+        "ref": "query:txn_sequence_context(txn_id=3581141)",
+        "entity_ids": [
+          "3581141"
+        ]
+      },
+      {
+        "claim": "The previous transaction was more than ten minutes earlier.",
+        "source": "graph",
+        "ref": "query:txn_sequence_context(txn_id=3581141)",
+        "entity_ids": [
+          "3581141"
+        ]
+      },
+      {
+        "claim": "4 prior charges on this card fall within $0.50 of $30.02.",
+        "source": "graph",
+        "ref": "query:amount_band_probe(card_id=C08299-K1, amt=30.02, tol=0.5, as_of=2016-12-28 12:10:53)",
+        "entity_ids": [
+          "C08299-K1"
+        ]
+      },
+      {
+        "claim": "$30.02 is below this card's own prior mean of $65.98.",
+        "source": "graph",
+        "ref": "query:amount_band_probe(card_id=C08299-K1, amt=30.02, tol=0.5, as_of=2016-12-28 12:10:53)",
+        "entity_ids": [
+          "C08299-K1"
+        ]
+      },
+      {
+        "claim": "$30.02 is within two standard deviations of this card's prior mean ($201.14).",
+        "source": "graph",
+        "ref": "query:amount_band_probe(card_id=C08299-K1, amt=30.02, tol=0.5, as_of=2016-12-28 12:10:53)",
+        "entity_ids": [
+          "C08299-K1"
+        ]
+      },
+      {
+        "claim": "An analyst reviewing the card's history found the charge consistent with the cardholder's own established pattern.",
+        "source": "customer",
+        "ref": "evidence_request:1",
+        "entity_ids": []
+      },
+      {
+        "claim": "Fraud Policy R7. Disputed but legitimate — applied here because cardholder disputes a charge that matches their own recurring pattern",
+        "source": "document",
+        "ref": "doc:POL-R7#R7",
+        "entity_ids": [
+          "POL-R7"
+        ]
+      },
+      {
+        "claim": "Fraud Policy §3a. A case is not a report — applied here because 3a: no report. fraud is neither confirmed nor strongly suspected (probability 0.57); exposure $30.02 is at or below $1,000; the activity connects to no shared device profile, region cluster or other customer's fraud.",
+        "source": "document",
+        "ref": "doc:POL-3A#3a",
+        "entity_ids": [
+          "POL-3A"
+        ]
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-1525",
+      "CC-0080",
+      "CC-2609",
+      "CC-2808",
+      "CC-0340",
+      "CC-2027"
+    ],
+    "summary": "The evidence shows a card-not-present online purchase that the customer says they did not make. The transaction is not a tiny probe authorization and there is no card-present travel pattern or other sign of out-of-region use; instead, the strongest signals are the online channel, the match-flag anomalies, and the customer report. The amount is also consistent with prior charges on this card, so this is not a card-testing sequence, but the overall record still fits card-not-present fraud more than legitimate activity.",
+    "written_to_graph": true,
+    "graph_case_id": "CASE-HHG-009"
+  },
+  "evidence_requests": [
+    {
+      "type": "analyst_info",
+      "asked_after_step": 7,
+      "assumed_response": "Analyst review finds the charge consistent with the cardholder's own established pattern on this card."
+    }
+  ],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R7: cardholder disputes a charge that matches their own recurring pattern"
+      },
+      {
+        "action": "VERIFY_WITH_CUSTOMER",
+        "route": "auto",
+        "reason": "R7: confirm with the cardholder that this is their own recurring charge"
+      },
+      {
+        "action": "WARN_CUSTOMER",
+        "route": "auto",
+        "reason": "R7: send an informational message about the recurring charge"
+      }
+    ],
+    "final": [
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R7: cardholder disputes a charge that matches their own recurring pattern"
+      },
+      {
+        "action": "VERIFY_WITH_CUSTOMER",
+        "route": "auto",
+        "reason": "R7: confirm with the cardholder that this is their own recurring charge"
+      },
+      {
+        "action": "WARN_CUSTOMER",
+        "route": "auto",
+        "reason": "R7: send an informational message about the recurring charge"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": false,
+    "reason": "3a: no report. fraud is neither confirmed nor strongly suspected (probability 0.57); exposure $30.02 is at or below $1,000; the activity connects to no shared device profile, region cluster or other customer's fraud.",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0.0,
+    "activity_dates": []
+  },
+  "stop_reason": "The investigation ended under policy condition 3a because fraud was neither confirmed nor strongly suspected at probability 0.57, the exposure was $30.02 and therefore at or below $1,000, and the activity did not connect to any shared device profile, region cluster, or other customer's fraud.",
+  "tool_calls": 12,
+  "tokens": 7050,
+  "latency_s": 17.1
+}

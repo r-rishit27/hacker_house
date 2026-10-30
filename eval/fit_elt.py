@@ -63,7 +63,7 @@ from pathlib import Path
 import duckdb
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from sentinel import config as cfg  # noqa: E402
+from etl import config as cfg  # noqa: E402
 
 OUT_PATH = cfg.ROOT / "sentinel" / "elt.json"
 NL = "\n"

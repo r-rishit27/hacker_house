@@ -1,8 +1,9 @@
 """Create and install Sentinel's GSQL queries.
 
-    python scripts/install_queries.py              # create, then install all
+    python scripts/install_queries.py               # create, then install all
     python scripts/install_queries.py --create-only # syntax check without installing
     python scripts/install_queries.py --list        # what is installed right now
+    python scripts/install_queries.py --file queries/sentinel_queries_v2.gsql
 
 Creating a query is fast and syntax-checks it. Installing compiles it and is
 slow, so everything is created first and installed in a single INSTALL QUERY
@@ -17,10 +18,11 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from sentinel import config as cfg  # noqa: E402
+from etl import config as cfg  # noqa: E402
 from scripts.load_to_tigergraph import read_gsql  # noqa: E402
 
 QUERY_FILE = "queries/sentinel_queries.gsql"
+QUERY_FILE_V2 = "queries/sentinel_queries_v2.gsql"
 
 
 def query_names(text: str) -> list[str]:
@@ -31,6 +33,12 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--create-only", action="store_true")
     ap.add_argument("--list", action="store_true")
+    ap.add_argument(
+        "--file",
+        action="append",
+        default=None,
+        help="GSQL file(s) under graph/, relative. Defaults to both query files.",
+    )
     args = ap.parse_args()
 
     conn = cfg.connect(verbose=False)
@@ -39,8 +47,11 @@ def main() -> None:
         print(conn.gsql(f"USE GRAPH {cfg.TG_GRAPH}\nLS"))
         return
 
-    body = read_gsql(QUERY_FILE)
+    files = args.file or [QUERY_FILE, QUERY_FILE_V2]
+    files = [f for f in files if (cfg.GRAPH_DIR / f).exists()]
+    body = "\n\n".join(read_gsql(f) for f in files)
     names = query_names(body)
+    print(f"from {', '.join(files)}")
     print(f"creating {len(names)} queries: {', '.join(names)}\n")
 
     out = conn.gsql(f"USE GRAPH {cfg.TG_GRAPH}\n{body}")
