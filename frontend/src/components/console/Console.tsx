@@ -110,7 +110,8 @@ export function Console({
 
       <header className="flex h-[54px] shrink-0 items-center gap-4 border-b border-border bg-surface px-4">
         <div className="flex shrink-0 items-center gap-2.5">
-          <Icon name="hex" size={22} style={{ color: "var(--accent-bold)" }} />
+          {/* eslint-disable-next-line @next/next/no-img-element -- a 26px mark; next/image adds nothing here */}
+          <img src="/logo.png" alt="" width={26} height={26} className="rounded-md" />
           <div className="flex flex-col leading-none">
             <span className="text-[14px] font-bold tracking-[0.14em]">SENTINEL</span>
             <span className="mt-0.5 font-mono text-[9px] leading-snug tracking-[0.06em] text-fg-muted">

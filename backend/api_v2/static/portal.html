@@ -205,6 +205,8 @@ tbody tr[aria-current="true"] { background: var(--accent-tint) }
 
   function route() {
     let v = (location.hash || "#queue").slice(1);
+    // #HHG-014 opens that case file: the assistant's reference links use it.
+    if (/^[A-Z]{2,4}-\d{3,4}$/.test(v)) { const cid = v; v = "queue"; if (alerts.length) openCase(cid); }
     const allowed = { queue: "queue.view", approvals: "approve.L1", access: "users.view" };
     if (!allowed[v] || !perms.has(allowed[v])) v = "queue";
     document.querySelectorAll("[data-view]").forEach((s) => (s.hidden = s.dataset.view !== v));
@@ -229,7 +231,7 @@ tbody tr[aria-current="true"] { background: var(--accent-tint) }
       perms = new Set(me.permissions); SentinelNav.render(me, "/portal"); caps();
       await loadQueue(); route();
       const first = alerts.find((a) => a.awaiting_you) || alerts.find((a) => a.investigation);
-      if (first && location.hash !== "#approvals" && location.hash !== "#access") openCase(first.case_id);
+      if (first && ["", "#queue"].includes(location.hash)) openCase(first.case_id);
     } catch (e) { if (e.message !== "signed out") flash(e.message, "err"); }
   })();
 })();

@@ -36,8 +36,8 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .mast-in { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; padding-block: 10px;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); max-width: 1400px; margin: 0 auto }
 .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -.01em; font-size: 1rem; text-decoration: none; color: var(--fg) }
-.brand-mark { width: 22px; height: 22px; border-radius: 6px; background: var(--accent-bold); position: relative; flex: none }
-.brand-mark::after { content: ""; position: absolute; inset: 6px 5px; border: 2px solid var(--surface); border-top: 0; border-right: 0; transform: rotate(-45deg) translate(1px, -2px) }
+/* --logo is the brand mark as a data URI, set by app.themed() */
+.brand-mark { width: 26px; height: 26px; border-radius: 6px; background: var(--accent-bold) var(--logo, none) center / cover no-repeat; flex: none }
 .navlinks { display: flex; gap: 4px; flex-wrap: wrap }
 .navlinks a { padding: 6px 10px; border-radius: var(--radius-md); color: var(--fg-muted); text-decoration: none; font-weight: 500 }
 .navlinks a:hover { background: var(--surface-2); color: var(--fg) }

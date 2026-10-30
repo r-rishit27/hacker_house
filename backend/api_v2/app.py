@@ -31,7 +31,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Red
 from api import auth
 from api_v2 import rbac, users
 from sentinel.domain.enums import Role
-from sentinel.typologies.audit import Ledger, verify
+from sentinel.typologies.audit import Ledger, redact, verify
 
 ROOT = Path(__file__).resolve().parents[2]
 # The signing secret and model keys live in .env; a value already in the environment wins.
@@ -114,15 +114,26 @@ FONTS = ('<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="
          '&family=JetBrains+Mono:wght@400;500&display=swap">')
 
 
+def _logo() -> str:
+    """The brand mark as a data URI, so a page (and the offline regulator snapshot) carries its own logo."""
+    import base64
+
+    return "data:image/png;base64," + base64.b64encode((STATIC / "logo.png").read_bytes()).decode()
+
+
 def themed(name: str) -> str:
     """A page with the shared theme inlined where it says <!--THEME-->: one stylesheet, every page."""
-    return (STATIC / name).read_text(encoding="utf8").replace(
-        "<!--THEME-->", FONTS + "<style>" + (STATIC / "theme.css").read_text(encoding="utf8") + "</style>", 1).replace(
+    logo = _logo()
+    head = f'{FONTS}<link rel="icon" type="image/png" href="{logo}"><style>:root{{--logo:url("{logo}")}}' \
+           + (STATIC / "theme.css").read_text(encoding="utf8") + "</style>"
+    return (STATIC / name).read_text(encoding="utf8").replace("<!--THEME-->", head, 1).replace(
         "<!--NAV-->", "<script>" + (STATIC / "nav.js").read_text(encoding="utf8") + "</script>", 1)
 
 
-def _page(name: str) -> str:
+def _page(name: str, assistant: bool = True) -> str:
     body = themed(name)
+    if assistant:  # the floating "Ask Sentinel" button on every signed-in page
+        body += "<script>" + (STATIC / "assistant.js").read_text(encoding="utf8") + "</script>"
     return ('<!doctype html><html lang="en"><head><meta charset="utf-8">'
             '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>'
             + body + "</body></html>")
@@ -157,7 +168,7 @@ def root():
 
 @app.get("/login", response_class=HTMLResponse, include_in_schema=False)
 def login_page():
-    return _page("login.html")
+    return _page("login.html", assistant=False)
 
 
 @app.get("/portal", response_class=HTMLResponse, include_in_schema=False)
@@ -312,6 +323,79 @@ async def approve(case_id: str, request: Request):
     except ApprovalError as exc:
         raise HTTPException(403, str(exc)) from exc
     return e
+
+
+# ── Ask Sentinel: the assistant (api_v2/assistant.py) ────────────────────────
+
+ASSIST = "_assistant"
+
+
+@app.get("/v2/assistant/scope")
+def assistant_scope(request: Request):
+    v = guard(request, "assistant.use")
+    from api_v2 import assistant
+
+    return {"viewer": v.as_dict(), "scope": assistant.scope(v.role), "model": assistant.assistant_model(),
+            "uploads": assistant.list_uploads(v.id) if rbac.can(v.role, "assistant.upload") else []}
+
+
+@app.post("/v2/assistant/ask")
+async def assistant_ask(request: Request):
+    v = guard(request, "assistant.use")
+    from api_v2 import assistant
+
+    body = await request.json()
+    history = body.get("history") if isinstance(body.get("history"), list) else []
+    try:
+        out = assistant.ask(str(body.get("question", "")), role=v.role, user=v.id, answers=_answers(),
+                            entries=ledger().entries(), history=history)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    ledger().append(ASSIST, "assistant.asked", {
+        "question": redact(str(body.get("question", ""))[:500]), "support": out["support"],
+        "sources": [s["id"] for s in out["sources"]], "cited": [s["id"] for s in out["sources"] if s["cited"]],
+        "withheld_permissions": [w["permission"] for w in out["withheld"]], "guardrails": out["guardrails"],
+        "model": out["model"], "tokens": out["tokens"], "latency_s": out["latency_s"]}, actor=v.id, role=v.role.value)
+    return out
+
+
+@app.get("/v2/assistant/sources/{sid:path}")
+def assistant_source(sid: str, request: Request):
+    """One source in full, for the reference links — the same entitlement check as the answer."""
+    v = guard(request, "assistant.use")
+    from api_v2 import assistant
+
+    s = assistant.source_by_id(sid, role=v.role, user=v.id, answers=_answers(), entries=ledger().entries())
+    if s is None:  # unknown and not-yours look the same, so a guess learns nothing
+        ledger().append(ASSIST, "assistant.source_refused", {"source": sid[:120]}, actor=v.id, role=v.role.value)
+        raise HTTPException(404, "no such source among what your role can see")
+    return {"id": s.id, "kind": s.kind, "title": s.title, "text": redact(s.text), "link": s.link}
+
+
+@app.post("/v2/assistant/uploads")
+async def assistant_upload(request: Request):
+    v = guard(request, "assistant.upload")
+    from api_v2 import assistant
+
+    body = await request.json()
+    try:
+        meta = assistant.add_upload(v.id, str(body.get("name", "")), str(body.get("text", "")))
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    ledger().append(ASSIST, "assistant.uploaded", {k: meta[k] for k in ("doc_id", "name", "chars")}
+                    | {"instruction_like_spans": len(meta["instruction_like_spans"])}, actor=v.id, role=v.role.value)
+    return meta
+
+
+@app.delete("/v2/assistant/uploads/{doc_id}")
+def assistant_remove(doc_id: str, request: Request):
+    v = guard(request, "assistant.upload")
+    from api_v2 import assistant
+
+    if not assistant.remove_upload(v.id, doc_id):
+        raise HTTPException(404, "no such document of yours")
+    ledger().append(ASSIST, "assistant.removed", {"doc_id": doc_id[:16]}, actor=v.id, role=v.role.value)
+    return {"removed": doc_id}
 
 
 # ── audit and change record ──────────────────────────────────────────────────

@@ -75,3 +75,12 @@ def test_demo_mode_is_marked_unauthenticated(monkeypatch):
     monkeypatch.delenv(auth.SECRET_ENV, raising=False)
     p = resolve({"X-Sentinel-Role": "team_lead"})
     assert p.role is Role.TEAM_LEAD and not p.authenticated
+
+
+def test_enforced_mode_accepts_the_signed_in_session_cookie(enforced):
+    # The console signs in once (api_v2) and the console API reads the same HttpOnly cookie.
+    tok = auth.mint("anika", "fraud_manager", key=KEY)
+    p = auth.resolve_principal({"X-Sentinel-Role": "analyst"}, {}, "", cookies={auth.SESSION_COOKIE: tok})
+    assert p.role is Role.FRAUD_MANAGER and p.authenticated and p.id == "anika"
+    with pytest.raises(auth.AuthError):
+        auth.resolve_principal({}, {}, "", cookies={auth.SESSION_COOKIE: tok[:-3] + "xyz"})

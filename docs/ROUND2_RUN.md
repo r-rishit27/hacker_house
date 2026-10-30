@@ -99,6 +99,27 @@ table, `backend/api_v2/rbac.py`, checked by the server on every request:
 
 Every sign-in, failed attempt, lock-out and refused request is a ledger entry (case `_access`).
 
+## Ask Sentinel: the assistant on every signed-in page
+
+The orange **Ask Sentinel** button (bottom right of the portal and the regulator view) answers
+questions in plain language from the investigations, their audit trails, the live graph (card and
+device history, closed-case precedent from the `ClosedCase.emb` vectors), the change record, the
+project documents and any text document the person uploads (`backend/api_v2/assistant.py`).
+
+| guardrail | how |
+|---|---|
+| Only what the role may see | every source carries a permission from `rbac.py`; what the role lacks is dropped before ranking, so the model never receives it. The reply names the missing permission, never the content |
+| Uploads are private | stored under `backend/var/uploads/<user>/` (git-ignored); only the uploader's questions can draw on them, and nobody else is told they exist |
+| Untrusted text stays data | question, uploads and sources are scanned for instruction-like wording and passed to the model as quoted data |
+| Answers cite their sources | `[S1]` markers link to the case file, the regulator view or the source text; citations to sources that were not given are removed; an uncited answer is marked unverified |
+| Read-only, recorded | no tool can block, approve, file or write; each question is a ledger entry (case `_assistant`) with the sources used and the permissions that withheld others |
+| Fails closed | no model → the best sources are listed instead of an unchecked answer; no graph → said in the reply |
+
+Retrieval fuses an embedding ranking (`OPENAI_EMBEDDING_MODEL`, cached in `backend/var/`) with an
+exact-id and keyword ranking by reciprocal rank (k = 60). The answer model is `OPENAI_ASSISTANT_MODEL`,
+falling back to `OPENAI_DECISION_MODEL`. Answers can be saved as a Markdown brief with their sources.
+Tests: `python -m pytest tests/unit/test_assistant.py`.
+
 ## Restricted MCP tools
 
 `python backend/api_v2/mcp_server.py` (stdio; registered in `.mcp.json` as `sentinel-round2`)

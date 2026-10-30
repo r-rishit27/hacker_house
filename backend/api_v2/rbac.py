@@ -25,15 +25,20 @@ PERMISSIONS: dict[str, str] = {
     "changes.view": "See the change record: data changes, configuration, status changes",
     "regulator.view": "Open the regulator's overview",
     "users.view": "See who has access and with which role",
+    "assistant.use": "Ask the assistant about what your role can see",
+    "assistant.upload": "Add your own documents for the assistant to read (only you see them)",
 }
 
+#: Everyone signed in may ask; what an answer can draw on is still limited to the role's other permissions.
+_ASK = {"assistant.use", "assistant.upload"}
+
 GRANTS: dict[Role, frozenset[str]] = {
-    Role.ANALYST: frozenset({"queue.view", "case.view", "case.investigate", "case.audit"}),
-    Role.TEAM_LEAD: frozenset({"queue.view", "case.view", "case.investigate", "case.audit", "approve.L1"}),
+    Role.ANALYST: frozenset({"queue.view", "case.view", "case.investigate", "case.audit", *_ASK}),
+    Role.TEAM_LEAD: frozenset({"queue.view", "case.view", "case.investigate", "case.audit", "approve.L1", *_ASK}),
     Role.FRAUD_MANAGER: frozenset({"queue.view", "case.view", "case.investigate", "case.audit", "approve.L1",
-                                   "approve.L2", "audit.all", "changes.view", "regulator.view", "users.view"}),
+                                   "approve.L2", "audit.all", "changes.view", "regulator.view", "users.view", *_ASK}),
     # The examiner reads everything that explains a decision and changes nothing.
-    Role.REGULATOR: frozenset({"case.view", "case.audit", "audit.all", "changes.view", "regulator.view"}),
+    Role.REGULATOR: frozenset({"case.view", "case.audit", "audit.all", "changes.view", "regulator.view", *_ASK}),
 }
 
 #: Where each role lands after signing in.

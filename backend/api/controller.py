@@ -133,7 +133,8 @@ class ApiController(RouterController):
         """
         try:
             return auth.resolve_principal(request.headers, request.query_params,
-                                          self.container.settings.default_role if not auth.secret() else "")
+                                          self.container.settings.default_role if not auth.secret() else "",
+                                          cookies=request.cookies)
         except auth.AuthError as exc:
             raise ApiError(f"invalid or missing token: {exc}", code="unauthenticated", status=401) from exc
 

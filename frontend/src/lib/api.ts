@@ -42,8 +42,9 @@ import type {
   ValidationBody,
 } from "@/lib/generated/contract";
 
-export const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "http://127.0.0.1:8000";
+/** Empty by default: the console API is reached through this app's own `/api` proxy
+ *  (next.config.ts), so the signed session cookie from sign-in goes with every call. */
+export const API_BASE = process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "";
 
 /** Where the role lives between reloads. Per-viewer convenience, nothing more. */
 const ROLE_KEY = "sentinel.role";
@@ -118,7 +119,8 @@ export class ApiProblem extends Error {
 type Query = Record<string, string | number | boolean | null | undefined>;
 
 function url(path: string, query?: Query): string {
-  const target = new URL(`${API_BASE}${path}`);
+  const origin = API_BASE || (typeof window !== "undefined" ? window.location.origin : "http://127.0.0.1:3000");
+  const target = new URL(`${origin}${path}`);
   for (const [key, value] of Object.entries(query ?? {})) {
     if (value !== null && value !== undefined && value !== "") {
       target.searchParams.set(key, String(value));
@@ -147,6 +149,10 @@ async function request<T>(
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 
+  if (response.status === 401 && typeof window !== "undefined") {
+    // The session expired or was never there: back to the front door, then back here.
+    window.location.assign(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+  }
   if (!response.ok) {
     let parsed: Record<string, unknown> = {};
     try {

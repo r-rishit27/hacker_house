@@ -142,7 +142,7 @@
         ]
       },
       {
-        "claim": "Fraud Policy R2. Customer denies the transaction — applied here because cardholder denies the transaction",
+        "claim": "Fraud Policy R2. Customer denies the transaction â€” applied here because cardholder denies the transaction",
         "source": "document",
         "ref": "doc:POL-R2#R2",
         "entity_ids": [
@@ -150,7 +150,7 @@
         ]
       },
       {
-        "claim": "Fraud Policy §3a. A case is not a report — applied here because 3a: no report. exposure $321.05 is at or below $1,000; the activity connects to no shared device profile, region cluster or other customer's fraud.",
+        "claim": "Fraud Policy Â§3a. A case is not a report â€” applied here because 3a: no report. exposure $321.05 is at or below $1,000; the activity connects to no shared device profile, region cluster or other customer's fraud.",
         "source": "document",
         "ref": "doc:POL-3A#3a",
         "entity_ids": [

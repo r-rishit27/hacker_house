@@ -102,19 +102,23 @@ def bearer(authorization: str | None) -> str | None:
     return value.strip() if scheme.lower() == "bearer" and value.strip() else None
 
 
-def resolve_principal(headers, query, default_role: str):
+#: The HttpOnly session cookie the v2 sign-in sets (api_v2/app.py). Same token, same secret.
+SESSION_COOKIE = "sentinel_session"
+
+
+def resolve_principal(headers, query, default_role: str, cookies=None):
     """Who is acting, for one request. The whole authentication decision, in one
     pure function so it is tested exactly as the server runs it.
 
-    Enforced (``SENTINEL_AUTH_SECRET`` set): a verified bearer token, or
-    ``?token=`` for EventSource; the role is the token's, a role header is
+    Enforced (``SENTINEL_AUTH_SECRET`` set): a verified bearer token, ``?token=``
+    for EventSource, or the signed session cookie from a browser sign-in; the role is the token's, a role header is
     ignored, anything else raises :class:`AuthError` (the API answers 401).
     Demo (no secret): the role header, marked ``authenticated=False``.
     """
     from api.principal import ROLE_HEADER, Principal, parse_role
 
     if secret():
-        token = bearer(headers.get("Authorization")) or query.get("token")
+        token = bearer(headers.get("Authorization")) or query.get("token") or (cookies or {}).get(SESSION_COOKIE)
         if not token:
             raise AuthError("authentication required: send a bearer token")
         claims = verify(token)

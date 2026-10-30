@@ -23,7 +23,15 @@ import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# The signing secret lives in .env, as for api_v2: with it, every call needs the signed-in
+# session (or a bearer token) and the role header is ignored. A value already in the environment wins.
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+
+from fastapi import FastAPI, Request  # noqa: E402
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -41,6 +49,8 @@ logger = logging.getLogger(__name__)
 
 #: Mounted under this, so a controller's ``/cases`` is ``/api/cases``.
 API_PREFIX = "/api"
+#: Answered without an identity: liveness, and the build/meta the sign-in page may show.
+OPEN_PATHS = frozenset({"/api/health", "/api/meta"})
 
 #: Every controller, in mount order. Static paths before parameterised ones so
 #: ``/api/benchmark/report`` can never be matched as somebody's ``{case_id}``.
@@ -90,6 +100,20 @@ def create_app(settings: Settings | None = None, *, container: Container | None 
         docs_url="/api/docs",
         openapi_url="/api/openapi.json",
     )
+
+    @app.middleware("http")
+    async def require_identity(request: Request, call_next):
+        """With a signing secret, nothing but health and meta is answered to an unknown caller.
+        Per-route checks still decide what a known caller may do."""
+        from api import auth
+
+        path = request.url.path
+        if auth.secret() and path.startswith(API_PREFIX) and path not in OPEN_PATHS and request.method != "OPTIONS":
+            try:
+                auth.resolve_principal(request.headers, request.query_params, "", cookies=request.cookies)
+            except auth.AuthError as exc:
+                return problem(code="unauthenticated", title="Sign in first", status=401, detail=str(exc))
+        return await call_next(request)
 
     app.add_middleware(RequestContextMiddleware)
     app.add_middleware(
