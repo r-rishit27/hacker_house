@@ -1,0 +1,298 @@
+SENTINEL — SUBMISSION ANSWERS
+Branch sentinel-v2, code freeze 0d0f64bff28b437632740b519b18a0c386fdf95b
+
+
+==============================================================================
+1. SETUP FROM A CLEAN CLONE
+   Every command in order, from git clone to ready, including credentials.
+   Assumes Python 3.11+ and nothing else.
+==============================================================================
+
+Step 0. Install the two tools Python does not include
+  Git (to clone; on Windows it also gives Git Bash, which run.sh needs)
+    Windows:  winget install Git.Git
+    macOS:    xcode-select --install
+    Linux:    sudo apt install git
+  Node.js 20 LTS (for the console on :3000)
+    Windows:  winget install OpenJS.NodeJS.LTS
+    macOS:    brew install node@20
+    Linux:    from nodejs.org
+  Open a new terminal, then check:  git --version   node --version
+
+Step 1. Get the code
+  git clone -b sentinel-v2 https://github.com/r-rishit27/hacker_house.git
+  cd hacker_house
+
+Step 2. Install the Python packages (a virtual environment is optional)
+  python -m pip install -e "./backend[scripts,dev]"
+  python -m pip install mcp            (optional: only for the MCP tools server)
+
+Step 3. Supply credentials
+  cp .env.example .env                 (PowerShell: Copy-Item .env.example .env)
+
+  Fill in .env:
+    TG_HOST=https://<your-savanna-workspace>.i.tgcloud.io
+    TG_SECRET=<workspace secret: Savanna > workspace > Connect > secrets>
+    TG_GRAPH=GRAPH_GOA
+    OPENAI_API_KEY=<your OpenAI key>
+    OPENAI_MODEL=gpt-5.4-mini
+    OPENAI_EMBEDDING_MODEL=text-embedding-3-large
+    OPENAI_EMBEDDING_DIMENSIONS=256
+    TG_API_TOKEN=                      (leave empty; a token is minted from the secret)
+
+  Add these four lines (not in the template):
+    OPENAI_DECISION_API=decisions
+    OPENAI_DECISION_MODEL=gpt-6-luna
+    SENTINEL_AUTH_SECRET=<long random string>
+
+  Generate the secret with:
+    python -c "import secrets; print(secrets.token_urlsafe(48))"
+  Without SENTINEL_AUTH_SECRET, sign-in and all writes are switched off.
+  .env is git-ignored and is never committed.
+
+Step 4. Create the four sign-ins (the user store is never committed)
+  cd backend
+  P='DhQoOakT2y5g' python -m api_v2.users add --user analyst.raj   --role analyst       --name Raj   --password-env P
+  P='NKzeymnl_qHu' python -m api_v2.users add --user lead.priya    --role team_lead     --name Priya --password-env P
+  P='yDme8E6s7CVN' python -m api_v2.users add --user manager.anika --role fraud_manager --name Anika --password-env P
+  P='0xVI4eIvFI7p' python -m api_v2.users add --user examiner.ines --role regulator     --name Ines  --password-env P
+  cd ..
+  (PowerShell: $env:P='DhQoOakT2y5g'; python -m api_v2.users add --user analyst.raj --role analyst --name Raj --password-env P
+   — or leave out --password-env and type the password when asked.)
+  Passwords are stored only as salted PBKDF2 hashes in backend/var/users.json.
+
+Step 5. Install the console's packages
+  cd frontend && npm ci && cd ..
+
+Step 6. Wake TigerGraph (Savanna stops the workspace when idle)
+  python scripts/warmup.py             (or ./run.sh warmup) — wait for READY, up to ~90 s
+  GRAPH_GOA already exists on the team workspace. On a brand-new workspace, build it first:
+    STAGING_DIR=data/staging_r2 python scripts/load_to_tigergraph.py
+    python scripts/install_queries.py
+    python scripts/install_queries.py --file queries/sentinel_queries_v3.gsql
+
+Step 7. Start the application
+  Git Bash / macOS / Linux, one command:
+    ./run.sh start
+  Without bash, three terminals:
+    1) cd backend && python -m uvicorn api_v2.app:app --host 127.0.0.1 --port 8100
+    2) mkdir -p backend/var/console_cases && cp cases/*.json backend/var/console_cases/
+       CASES_DIR=backend/var/console_cases python -m uvicorn api.main:app --app-dir backend --host 127.0.0.1 --port 8000
+    3) cd frontend && npx next dev -p 3000
+
+Step 8. Ready
+  Open http://localhost:3000 and sign in:
+    analyst.raj    / DhQoOakT2y5g   Analyst        -> console
+    lead.priya     / NKzeymnl_qHu   Team lead      -> console
+    manager.anika  / yDme8E6s7CVN   Fraud manager  -> console
+    examiner.ines  / 0xVI4eIvFI7p   Regulator      -> regulator overview
+  Ask Sentinel is the logo button at the bottom right.
+
+Answering the case pack (from the frozen code)
+  ./run.sh pack case_pack_final.csv    (warm-up, every case into cases/, then self-grade)
+  One case:  ./run.sh case HHF-007
+  Direct:    cd backend && python -m sentinel.typologies.run --pack ../case_pack_final.csv --out ../cases
+
+Checks
+  ./run.sh status     ./run.sh test (406 unit tests, no network needed)
+
+
+==============================================================================
+2. MODELS AND SERVICES WE CALL
+   Every external model or service, what data it sees, and whether that data
+   leaves our boundary.
+==============================================================================
+
+The data is the challenge dataset: pseudonymous ids (card C00000-K1, customer,
+device profile hashes, e-mail domains), amounts, dates and codes. It holds no
+names, card numbers, phone numbers or addresses. Everything below runs on our
+side except the services marked LEAVES THE BOUNDARY.
+
+A. TigerGraph Savanna (third-party cloud, tgcloud.io) — LEAVES THE BOUNDARY
+   What it holds: the whole graph GRAPH_GOA: 650,938 transactions July 2016 –
+   January 2017, identity records, 5,585 closed cases with their analyst notes
+   and 256-dimension note embeddings, and the FraudCase records Sentinel writes
+   back. Also three test-bank graphs (Bank_ISO20022, Bank_BIAN, Bank_CoreT24)
+   holding synthetic sample records only.
+   What we send: GSQL query parameters (card ids, device ids, time windows) and
+   write-backs (verdict, probability, transaction and card ids, pattern,
+   created_by). Authentication: a token minted from TG_SECRET.
+
+B. OpenAI decisions endpoint, model gpt-6-luna — LEAVES THE BOUNDARY
+   When: only for cases the rules cannot settle (tricky cases).
+   What it sees: the flagged transaction and up to 35 nearby ones on the card,
+   the card's baseline, detector findings, history checks, up to 8 linked
+   closed cases with notes cut to 320 characters, and the alert's trigger_text
+   quoted as untrusted data. It returns five probabilities, never prose.
+
+C. OpenAI embeddings, model text-embedding-3-large (256 dims) — LEAVES THE BOUNDARY
+   What it sees: the 5,585 closed-case notes, once, to build ClosedCase vectors;
+   per tricky case, a one-paragraph description of the flagged purchase; for Ask
+   Sentinel, the user's question and the text of the sources that role may see
+   (cached by hash, so each text is sent once).
+
+D. OpenAI chat, model gpt-6-luna, for Ask Sentinel — LEAVES THE BOUNDARY
+   What it sees: the question, up to 6 earlier turns of that user's own
+   conversation, and up to 8 retrieved sources the asking role is permitted to
+   see: answer-file summaries, audit-trail lines, live graph facts, closed-case
+   notes, project documents, and that user's own uploaded documents.
+   Sources the role may not see are removed before anything is sent. E-mail
+   addresses, card-number-like digit runs and phone numbers are masked in what
+   is shown and logged.
+
+E. OpenAI chat, model gpt-5.4-mini, for the console's investigation agent
+   (console "Run" and "Run all 20") — LEAVES THE BOUNDARY
+   What it sees: the case's evidence as the agent gathers it (transactions,
+   detector and policy findings, retrieved closed cases) to plan steps and write
+   narrative text (case summary, exoneration note, SAR narrative). It never
+   picks an action, route, amount or id; those come from the graph and the
+   policy engine.
+
+F. OpenAI chat, model gpt-6-luna, for bank onboarding (only when someone runs
+   "onboarding propose") — LEAVES THE BOUNDARY
+   What it sees: a bank's schema STRUCTURE only: vertex, edge and attribute
+   names, types and directions. No records, and not the schema file's comments.
+
+Nothing else is called. No customer-facing message is ever sent: evidence
+replies (customer validation and so on) are simulated, stated as assumptions,
+and never mention a report. The MCP server, the audit ledger, the user store,
+uploads, answer files and the lab mirror (DuckDB) all stay on our machine.
+No IEEE-CIS / Kaggle file is downloaded, opened or referenced.
+
+
+==============================================================================
+3. WHAT WE DEPEND ON, AND WHAT HAPPENS WHEN EACH FAILS
+==============================================================================
+
+THE GRAPH (TigerGraph Savanna)
+  - Unreachable, asleep ("workspace is starting"), token refused, or a query
+    error during a case: the case FAILS CLOSED. The runner records case.failed
+    in the audit ledger with the error, writes no answer file and no graph
+    record, and exits with code 2. There is no silent fallback to the local
+    mirror; the mirror is used only when asked for (--source lab), and every
+    evidence reference then says "mirror".
+  - An id the graph does not have (UnknownId): that case fails and is recorded;
+    the rest of the pack continues. Exit code 1.
+  - Write-back: a case is marked written_to_graph only after the installed query
+    reads it back with the same verdict and transactions; otherwise it says not
+    written.
+  - Token renewal: tokens are minted from the secret (TigerGraph 4.x
+    /gsql/v1/tokens, 3.x fallback) and re-minted when refused.
+  - Onboarded bank: if its mapping is not approved, or was edited after
+    approval, or its graph is down, the run is refused with exit 2 and nothing
+    is written.
+  - Console: graph views return 503 with the reason; the page says so.
+  Recovery: python scripts/warmup.py, then re-run the case.
+
+THE MODELS (OpenAI)
+  - Decision model (tricky cases): timeout, transport error, malformed or
+    schema-invalid reply, or a reply that cites ids outside the evidence: the
+    case becomes UNCERTAIN and ESCALATE_TO_ANALYST, with the failure recorded.
+    The model can never block on its own, overrule a detector or a customer's
+    denial, and its uncertain probability is capped at 0.69, below the
+    report-filing threshold. Rules-only mode: --no-model.
+  - Embeddings unavailable: precedent comes from graph links only, and the
+    answer file says "vector precedent was not used for this case" with the
+    reason. Ask Sentinel falls back to keyword ranking and says so.
+  - Ask Sentinel's answer model unavailable: it does not guess; it lists the
+    most relevant permitted sources with links and says the model could not be
+    reached. An answer that cites nothing is marked "unverified"; citations to
+    sources it was not given are removed.
+  - Console investigation agent (gpt-5.4-mini): if a narrative call fails, it
+    retries, then uses a fixed template text and records that it did; verdicts,
+    actions and routes are unaffected because no model chooses them.
+  - Onboarding proposer: a proposal that names anything the schema lacks is
+    sent back (at most twice); whatever still fails is listed, never silently
+    trimmed, and no mapping is usable until a person reviews it and a team lead
+    or fraud manager signs it.
+  - Prompt injection in alert text, questions or uploads: scanned, flagged, and
+    passed to models as quoted data; it does not change the assessment
+    (12 attacks tested: 0 of 36 runs flipped when defended).
+
+THE TOOL LAYER (installed GSQL queries, MCP tools, the services)
+  - Installed queries: 36 GSQL queries; a missing or failing query raises and
+    the case fails closed as above.
+  - MCP tools (5, read-only): arguments are validated before any query (card,
+    device and case id formats, ISO timestamps); a bad argument returns a
+    readable refusal, not a query. No raw-GSQL tool and no write tool exist.
+    Every call is an audit entry.
+  - Malformed alert row (missing field, bad timestamp, unknown trigger type,
+    card not the customer's): refused before any query, with the reason.
+  - Sign-in and approvals: without SENTINEL_AUTH_SECRET, sign-in and all writes
+    are disabled and the console API refuses every call except health. A wrong
+    role is refused (403) and the refusal is recorded; an approval needs a
+    signed identity whose role is on the action's route.
+  - Audit ledger: append-only and hash-chained; any edit breaks the chain at
+    that entry, which verify (and the regulator view, in the browser) reports.
+  - Data changes: a new or changed data file is refused for staging until a
+    team lead or fraud manager approves the drift report bound to its hash.
+
+In one line: when the graph, a model or a tool fails, Sentinel stops or
+de-escalates to "uncertain, ask a person", records why in the audit trail, and
+never writes an answer it could not support.
+
+
+==============================================================================
+4. CHALLENGES WE TICKED — WHAT WE BUILT
+==============================================================================
+
+11 - Data quality detective
+  eval/data_quality.py flags the data gaps that hide or fake fraud: missing
+  identity records, empty billing regions, placeholder values, unlabelled
+  devices, thin card history. Every gap comes with its affected ids, mapped to
+  the investigations it taints. Limit: gaps are reported, not yet fed back into
+  the decision automatically.
+
+12 - Schema drift survival
+  scripts/schema_drift.py detects drift in incoming data: columns, null rates,
+  value domains, id order, changed closed cases. It writes a drift report that a
+  team lead or fraud manager signs, and the approval is bound to the report's
+  hash. Staging refuses unapproved or altered data. January 2017 was onboarded
+  exactly this way.
+
+13 - Someone else's schema
+  backend/sentinel/onboarding/ maps any bank's graph onto our canonical model.
+  An LLM proposes, code validates every name and path, a human reviews, a team
+  lead signs. One adapter then runs the unchanged detectors on that bank's
+  graph. Tested on ISO 20022, BIAN and Temenos T24: 79/79 mapping items right
+  after review, 0 wrong, and the same fraud found live in all three. Limits:
+  1-3 min per case (one REST call per hop), and the console shows only the
+  main dataset. See docs/ONBOARDING.md.
+
+
+==============================================================================
+5. INNOVATION CLAIM — ASK SENTINEL
+==============================================================================
+
+The idea, in one sentence:
+  Ask Sentinel is a permission-aware GraphRAG copilot: anyone at the bank can
+  ask the fraud graph a question in plain English and get a cited answer built
+  ONLY from what their role is entitled to see — entitlement is enforced
+  before retrieval, so the LLM never receives what the user may not read.
+
+Why it matters:
+  Most enterprise copilots filter the answer; we filter the context. In a
+  regulated bank that is the difference between "the model was told not to
+  say it" and "the model never had it". Zero data leakage by construction,
+  every claim cited, every question on the hash-chained audit trail.
+
+Where it changes the outcome (measured, live):
+  - Same question, two roles: "Who failed to sign in, according to the access
+    log?"
+      Analyst      -> 114 sources built, 4 withheld before ranking. Answer: "not
+                      found in what you can see; your role lacks audit.all".
+                      Nothing from the access log reached the model.
+      Fraud mgr    -> the access log is in scope and is retrieved (tested).
+                      Asked "who approved the report on HHG-014, and who was
+                      refused?", it answers from the audit trail: Anika approved;
+                      Priya (L2) and Raj (L1) were refused, each claim cited.
+  - 0 out-of-entitlement sources sent to the model; another user's uploaded
+    document is never ranked or hinted at (tests/unit/test_assistant.py, 8 tests).
+  - Hallucinated citations are stripped before the user sees them; an answer
+    with no valid citation is labelled "unverified".
+  - Prompt injection in questions or uploads is detected and treated as data.
+  - Fails closed: model down -> it lists the permitted sources, never guesses.
+  - About 8 s and ~3k tokens per question; retrieval fuses graph facts,
+    closed-case vectors and keywords (RRF).
+
+Code: backend/api_v2/assistant.py · frontend/src/components/assistant/AskSentinel.tsx
