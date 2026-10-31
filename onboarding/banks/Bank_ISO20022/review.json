@@ -1,0 +1,25 @@
+{
+ "by": "Claude (reviewer for the demo; the bank's data owner reviews for real)",
+ "at": "2026-10-31",
+ "changes": [
+  {
+   "target": "attributes:Transaction.channel",
+   "value": {
+    "status": "approximate",
+    "reason": "taken from the transfer itself; pacs.008 credit transfers are electronic",
+    "sources": [
+     {
+      "vertex": "CdtTrfTxInf",
+      "attribute": "PmtTpInf_LclInstrm_Cd",
+      "transform": "code",
+      "values": {
+       "INST": "online",
+       "*": "online"
+      }
+     }
+    ]
+   },
+   "why": "The proposal used PmtInf.PmtMtd, which is on the batch order, not the transfer. Every pacs.008 transfer is an electronic interbank payment, so all of them count as online; the local instrument code is kept as the source so instant payments stay identifiable."
+  }
+ ]
+}

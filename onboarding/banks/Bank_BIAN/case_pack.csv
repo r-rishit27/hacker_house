@@ -1,0 +1,2 @@
+case_id,opened_at,trigger_type,trigger_text,flagged_txn_id,card_id,customer_id,risk_score
+BIAN-001,2026-10-01 09:00:00,risk_score,Real-time model scored the transfer 0.71.,PE-0104,CAF-0,PRD-0,0.71

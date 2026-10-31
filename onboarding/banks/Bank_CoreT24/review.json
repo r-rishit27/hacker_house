@@ -1,0 +1,185 @@
+{
+ "by": "Claude (reviewer for the demo; the bank's data owner reviews for real)",
+ "at": "2026-10-31",
+ "changes": [
+  {
+   "target": "attributes:Transaction.timestamp",
+   "value": {
+    "status": "approximate",
+    "reason": "DATE_TIME is T24's YYMMDDHHMM audit stamp, the only time of day",
+    "sources": [
+     {
+      "vertex": "FUNDS_TRANSFER",
+      "attribute": "DATE_TIME",
+      "transform": "yymmddhhmm"
+     },
+     {
+      "vertex": "TELLER",
+      "attribute": "DATE_TIME",
+      "transform": "yymmddhhmm"
+     }
+    ]
+   },
+   "why": "The proposal assumed YYYYMMDDHHMMSS; T24's DATE_TIME is a 10-character YYMMDDHHMM stamp. With the wrong format every transaction would have been dropped."
+  },
+  {
+   "target": "attributes:Transaction.channel",
+   "value": {
+    "status": "approximate",
+    "reason": "FT transaction-type codes; TELLER is cash at a branch",
+    "sources": [
+     {
+      "vertex": "FUNDS_TRANSFER",
+      "attribute": "TRANSACTION_TYPE",
+      "transform": "code",
+      "values": {
+       "OT": "online",
+       "AC": "online",
+       "*": "other"
+      }
+     },
+     {
+      "vertex": "TELLER",
+      "attribute": "TRANSACTION_CODE",
+      "transform": "code",
+      "values": {
+       "*": "branch"
+      }
+     }
+    ]
+   },
+   "why": "This bank's FUNDS.TRANSFER types OT and AC are entered through internet banking; TELLER records are cash."
+  },
+  {
+   "target": "concepts:Device",
+   "value": {
+    "status": "approximate",
+    "reason": "T24 has no device record; the sign-on terminal id is the nearest thing",
+    "sources": [
+     {
+      "vertex": "PROTOCOL",
+      "attribute": "TERMINAL_ID"
+     }
+    ]
+   },
+   "why": "The proposal left Device unmapped. PROTOCOL.TERMINAL_ID identifies the terminal a user signed on from. There is no edge from a transfer to a sign-on, so device detectors stay off for this bank."
+  },
+  {
+   "target": "concepts:LoginEvent",
+   "value": {
+    "status": "exact",
+    "reason": "PROTOCOL records whose APPLICATION is SIGN.ON",
+    "sources": [
+     {
+      "vertex": "PROTOCOL",
+      "filter": {
+       "attribute": "APPLICATION",
+       "op": "=",
+       "values": [
+        "SIGN.ON"
+       ]
+      }
+     }
+    ]
+   },
+   "why": "F.PROTOCOL logs every activity; sign-ons are the rows with APPLICATION = SIGN.ON."
+  },
+  {
+   "target": "relations:INITIATED",
+   "value": {
+    "status": "exact",
+    "reason": "the debited account",
+    "paths": [
+     {
+      "start": "ACCOUNT",
+      "steps": [
+       "reverse_FT_DEBIT_ACCT_NO"
+      ],
+      "end": "FUNDS_TRANSFER",
+      "filter": null
+     },
+     {
+      "start": "ACCOUNT",
+      "steps": [
+       "reverse_TT_ACCOUNT_1"
+      ],
+      "end": "TELLER",
+      "filter": {
+       "vertex": "TELLER",
+       "attribute": "DR_CR_MARKER",
+       "op": "=",
+       "values": [
+        "DEBIT"
+       ]
+      }
+     }
+    ]
+   },
+   "why": "A TELLER record debits ACCOUNT.1 only when DR.CR.MARKER is DEBIT (a withdrawal)."
+  },
+  {
+   "target": "relations:PAYS_TO_ACCOUNT",
+   "value": {
+    "status": "exact",
+    "reason": "the credited account",
+    "paths": [
+     {
+      "start": "FUNDS_TRANSFER",
+      "steps": [
+       "FT_CREDIT_ACCT_NO"
+      ],
+      "end": "ACCOUNT",
+      "filter": null
+     },
+     {
+      "start": "TELLER",
+      "steps": [
+       "TT_ACCOUNT_1"
+      ],
+      "end": "ACCOUNT",
+      "filter": {
+       "vertex": "TELLER",
+       "attribute": "DR_CR_MARKER",
+       "op": "=",
+       "values": [
+        "CREDIT"
+       ]
+      }
+     }
+    ]
+   },
+   "why": "A TELLER deposit credits ACCOUNT.1 when DR.CR.MARKER is CREDIT."
+  },
+  {
+   "target": "attributes:Account.kyc_score",
+   "value": {
+    "status": "unmapped",
+    "sources": [],
+    "reason": "no numeric KYC score"
+   },
+   "why": "CALC/MANUAL.RISK.CLASS are AML risk classes, not a KYC score, and KYC.COMPLETE is YES/NO. Leaving it unmapped is better than a misleading number."
+  },
+  {
+   "target": "attributes:account_under_investigation",
+   "value": {
+    "status": "approximate",
+    "reason": "posting restriction 25 is this bank's fraud block",
+    "sources": [
+     {
+      "vertex": "ACCOUNT",
+      "attribute": "POSTING_RESTRICT",
+      "transform": "code",
+      "filter": {
+       "attribute": "POSTING_RESTRICT",
+       "op": "=",
+       "values": [
+        "25"
+       ]
+      }
+     }
+    ]
+   },
+   "why": "T24 has no case record; POSTING.RESTRICT 25 marks an account blocked for fraud."
+  }
+ ]
+}

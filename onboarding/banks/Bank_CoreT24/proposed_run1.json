@@ -1,0 +1,419 @@
+{
+ "bank": "Bank_CoreT24",
+ "schema_sha256": "2c42e07696b0e77bfac183bada9ea48af25bf5e2f798391ee41db22e3c36084c",
+ "proposed_by": "gpt-6-luna",
+ "concepts": {
+  "Person": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "CUSTOMER"
+    }
+   ],
+   "reason": "CUSTOMER represents bank customers, including individuals and organisations."
+  },
+  "Account": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "ACCOUNT"
+    }
+   ],
+   "reason": "ACCOUNT represents accounts held at the bank."
+  },
+  "Transaction": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "FUNDS_TRANSFER"
+    },
+    {
+     "vertex": "TELLER"
+    }
+   ],
+   "reason": "Transfers and teller transactions represent money movements; statement entries are derived postings."
+  },
+  "Device": {
+   "status": "unmapped",
+   "sources": [],
+   "reason": "No device vertex or device attribute is present."
+  },
+  "IPAddress": {
+   "status": "approximate",
+   "sources": [
+    {
+     "vertex": "PROTOCOL",
+     "attribute": "IP_ADDRESS",
+     "transform": "none"
+    }
+   ],
+   "reason": "An IP address is recorded as a protocol attribute, not as a vertex."
+  },
+  "LoginEvent": {
+   "status": "approximate",
+   "sources": [
+    {
+     "vertex": "PROTOCOL"
+    }
+   ],
+   "reason": "Protocol records may capture sign-ons, but the schema does not identify them specifically as login events."
+  },
+  "Beneficiary": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "BENEFICIARY"
+    }
+   ],
+   "reason": "BENEFICIARY represents a payee and has an edge to a customer where applicable."
+  },
+  "Card": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "CARD_ISSUE"
+    }
+   ],
+   "reason": "CARD_ISSUE represents bank-issued cards."
+  },
+  "Merchant": {
+   "status": "unmapped",
+   "sources": [],
+   "reason": "No merchant vertex or merchant attribute is present."
+  },
+  "InvestigationCase": {
+   "status": "unmapped",
+   "sources": [],
+   "reason": "No investigation-case vertex or case attribute is present."
+  }
+ },
+ "relations": {
+  "OWNS": {
+   "status": "exact",
+   "paths": [
+    {
+     "start": "CUSTOMER",
+     "steps": [
+      "reverse_ACCOUNT_CUSTOMER"
+     ],
+     "end": "ACCOUNT"
+    },
+    {
+     "start": "CUSTOMER",
+     "steps": [
+      "reverse_JOINT_HOLDER"
+     ],
+     "end": "ACCOUNT"
+    }
+   ],
+   "reason": "Customer-to-account ownership is represented by reverse edges from ACCOUNT to CUSTOMER."
+  },
+  "INITIATED": {
+   "status": "approximate",
+   "paths": [
+    {
+     "start": "ACCOUNT",
+     "steps": [
+      "reverse_FT_DEBIT_ACCT_NO"
+     ],
+     "end": "FUNDS_TRANSFER"
+    },
+    {
+     "start": "ACCOUNT",
+     "steps": [
+      "reverse_TT_ACCOUNT_1"
+     ],
+     "end": "TELLER",
+     "filter": {
+      "vertex": "TELLER",
+      "attribute": "DR_CR_MARKER",
+      "op": "=",
+      "values": [
+       "D"
+      ]
+     }
+    }
+   ],
+   "reason": "Transfers link to debit accounts; teller transactions need a debit-marker filter whose value is inferred."
+  },
+  "PAYS_TO_ACCOUNT": {
+   "status": "approximate",
+   "paths": [
+    {
+     "start": "FUNDS_TRANSFER",
+     "steps": [
+      "FT_CREDIT_ACCT_NO"
+     ],
+     "end": "ACCOUNT"
+    },
+    {
+     "start": "TELLER",
+     "steps": [
+      "TT_ACCOUNT_1"
+     ],
+     "end": "ACCOUNT",
+     "filter": {
+      "vertex": "TELLER",
+      "attribute": "DR_CR_MARKER",
+      "op": "=",
+      "values": [
+       "C"
+      ]
+     }
+    }
+   ],
+   "reason": "Transfers link to credited accounts; teller deposits need a credit-marker filter whose value is inferred."
+  },
+  "PAYS": {
+   "status": "exact",
+   "paths": [
+    {
+     "start": "FUNDS_TRANSFER",
+     "steps": [
+      "FT_BENEFICIARY"
+     ],
+     "end": "BENEFICIARY"
+    }
+   ],
+   "reason": "Transfers link directly to their beneficiaries."
+  },
+  "FROM_DEVICE": {
+   "status": "unmapped",
+   "paths": [],
+   "reason": "No device vertex or transaction-to-device edge is present."
+  },
+  "FROM_IP": {
+   "status": "unmapped",
+   "paths": [],
+   "reason": "Protocol records contain IP addresses, but no transaction-to-protocol or transaction-to-IP link is present."
+  },
+  "AT": {
+   "status": "unmapped",
+   "paths": [],
+   "reason": "No merchant vertex or transaction-to-merchant edge is present."
+  },
+  "VIA": {
+   "status": "unmapped",
+   "paths": [],
+   "reason": "No transaction-to-card edge is present."
+  },
+  "HOLDS": {
+   "status": "exact",
+   "paths": [
+    {
+     "start": "ACCOUNT",
+     "steps": [
+      "reverse_CARD_ISSUE_ACCOUNT"
+     ],
+     "end": "CARD_ISSUE"
+    }
+   ],
+   "reason": "Cards link to their accounts; the reverse edge gives account-to-card direction."
+  },
+  "LOGGED_IN": {
+   "status": "approximate",
+   "paths": [
+    {
+     "start": "PROTOCOL",
+     "steps": [
+      "PROTOCOL_USER",
+      "EXT_USER_CUSTOMER",
+      "reverse_ACCOUNT_CUSTOMER"
+     ],
+     "end": "ACCOUNT"
+    },
+    {
+     "start": "PROTOCOL",
+     "steps": [
+      "PROTOCOL_USER",
+      "EXT_USER_CUSTOMER",
+      "reverse_JOINT_HOLDER"
+     ],
+     "end": "ACCOUNT"
+    }
+   ],
+   "reason": "Protocol records link through external users to customers and their accounts, but are not explicitly identified as sign-ons."
+  },
+  "LOGIN_FROM_DEVICE": {
+   "status": "unmapped",
+   "paths": [],
+   "reason": "No device vertex or login-to-device edge is present."
+  },
+  "LOGIN_FROM_IP": {
+   "status": "unmapped",
+   "paths": [],
+   "reason": "IP addresses are protocol attributes, not vertices connected to login records."
+  },
+  "INVESTIGATED_IN": {
+   "status": "unmapped",
+   "paths": [],
+   "reason": "No investigation-case vertex or account-to-case edge is present."
+  }
+ },
+ "attributes": {
+  "Transaction.amount": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "FUNDS_TRANSFER",
+     "attribute": "DEBIT_AMOUNT",
+     "transform": "none"
+    },
+    {
+     "vertex": "FUNDS_TRANSFER",
+     "attribute": "CREDIT_AMOUNT",
+     "transform": "none"
+    },
+    {
+     "vertex": "TELLER",
+     "attribute": "AMOUNT_LOCAL_1",
+     "transform": "none"
+    }
+   ],
+   "reason": "Transfer debit or credit amounts and teller amounts record movement values."
+  },
+  "Transaction.timestamp": {
+   "status": "approximate",
+   "sources": [
+    {
+     "vertex": "FUNDS_TRANSFER",
+     "attribute": "DATE_TIME",
+     "transform": "yyyymmddhhmmss"
+    },
+    {
+     "vertex": "TELLER",
+     "attribute": "DATE_TIME",
+     "transform": "yyyymmddhhmmss"
+    }
+   ],
+   "reason": "Date-time attributes are present, but their string format is not specified."
+  },
+  "Transaction.channel": {
+   "status": "unmapped",
+   "sources": [],
+   "reason": "No attribute explicitly identifies how a transaction was made."
+  },
+  "Account.open_date": {
+   "status": "approximate",
+   "sources": [
+    {
+     "vertex": "ACCOUNT",
+     "attribute": "OPENING_DATE",
+     "transform": "yyyymmdd"
+    }
+   ],
+   "reason": "An opening date is present as a string; its format is assumed."
+  },
+  "Account.status": {
+   "status": "approximate",
+   "sources": [
+    {
+     "vertex": "ACCOUNT",
+     "attribute": "RECORD_STATUS",
+     "transform": "code"
+    },
+    {
+     "vertex": "ACCOUNT",
+     "attribute": "POSTING_RESTRICT",
+     "transform": "code"
+    }
+   ],
+   "reason": "Record and posting-restriction codes may indicate status but need lookup and interpretation."
+  },
+  "Account.kyc_score": {
+   "status": "approximate",
+   "sources": [
+    {
+     "vertex": "CUSTOMER",
+     "attribute": "CALC_RISK_CLASS",
+     "transform": "code"
+    }
+   ],
+   "reason": "This is a customer-level risk class, not a numeric account-level KYC score."
+  },
+  "Person.anonymized_ssn_hash": {
+   "status": "approximate",
+   "sources": [
+    {
+     "vertex": "CUSTOMER",
+     "attribute": "LEGAL_ID_HASH",
+     "transform": "none"
+    }
+   ],
+   "reason": "A legal identity hash is present, but it is not identified specifically as an SSN hash."
+  },
+  "Person.kyc_verified_at": {
+   "status": "approximate",
+   "sources": [
+    {
+     "vertex": "CUSTOMER",
+     "attribute": "LAST_KYC_REVIEW_DATE",
+     "transform": "yyyymmdd"
+    }
+   ],
+   "reason": "The last review date is a date-only proxy for identity verification time; format is assumed."
+  },
+  "Beneficiary.bank_identifier": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "BENEFICIARY",
+     "attribute": "BEN_BANK_SORT_CODE",
+     "transform": "none"
+    },
+    {
+     "vertex": "BENEFICIARY",
+     "attribute": "BEN_BIC",
+     "transform": "none"
+    }
+   ],
+   "reason": "The beneficiary's sort code and BIC are bank identifiers."
+  },
+  "Beneficiary.name_hash": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "BENEFICIARY",
+     "attribute": "BEN_SHORT_NAME_HASH",
+     "transform": "none"
+    }
+   ],
+   "reason": "The beneficiary short-name hash is present."
+  },
+  "InvestigationCase.status": {
+   "status": "unmapped",
+   "sources": [],
+   "reason": "No investigation-case status is present."
+  },
+  "IPAddress.anonymizer": {
+   "status": "unmapped",
+   "sources": [],
+   "reason": "No proxy, VPN, or Tor indicator is present."
+  },
+  "account_under_investigation": {
+   "status": "approximate",
+   "sources": [
+    {
+     "vertex": "ACCOUNT",
+     "attribute": "POSTING_RESTRICT",
+     "transform": "code"
+    }
+   ],
+   "reason": "A posting restriction may be a block signal, but does not establish that an account is under investigation."
+  }
+ },
+ "needs_review": [
+  "The DR_CR_MARKER values \"D\" and \"C\" are inferred as debit and credit; confirm the bank's actual values.",
+  "Confirm that FUNDS_TRANSFER and TELLER records represent completed movements, and that their DATE_TIME strings use yyyymmddhhmmss.",
+  "Confirm the OPENING_DATE and LAST_KYC_REVIEW_DATE string formats.",
+  "CALC_RISK_CLASS is a customer-level class, not an account-level numeric KYC score.",
+  "Confirm whether POSTING_RESTRICT or RECORD_STATUS values encode account status or an investigation-related block."
+ ],
+ "proposal": {
+  "model": "gpt-6-luna",
+  "attempts": 2,
+  "tokens": 16268,
+  "seconds": 83.9,
+  "problems": []
+ }
+}
