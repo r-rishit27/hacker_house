@@ -6,7 +6,7 @@ Brief: https://hhgoa-tg-round2.vercel.app/ · ✅ done and verified · ➖ parti
 
 | requirement | status | evidence |
 |---|---|---|
-| Frozen code at a commit hash | ✅ | `b405e0f7edbbffdf7ecc765485d1452c2fd77462` on `sentinel-v2` (code freeze; later commits change docs only) |
+| Frozen code at a commit hash | ✅ | `0d0f64bff28b437632740b519b18a0c386fdf95b` on `sentinel-v2` (code freeze; later commits change docs only) |
 | Answer files for all 18 cases, from the frozen code | ⏳ | pack not released; `cd backend && python -m sentinel.typologies.run --pack ../case_pack_final.csv --out ../cases` |
 | One command for a single case from a clean clone, setup written down | ✅ | [ROUND2_RUN.md](ROUND2_RUN.md) §1–2; clean clone run verified |
 | One-page resilience statement | ✅ | [RESILIENCE.md](RESILIENCE.md), 571 words |
