@@ -1,0 +1,740 @@
+{
+ "bank": "Bank_BIAN",
+ "schema_sha256": "ac12e20819ec2ad4271ddf84c81b8314d4e41a74c11b187e8f875c7cad3c4244",
+ "proposed_by": "gpt-6-luna",
+ "concepts": {
+  "Person": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "PartyReferenceDataDirectoryEntry",
+     "filter": {
+      "attribute": "partyType",
+      "op": "in",
+      "values": [
+       "Individual",
+       "Organisation"
+      ],
+      "vertex": "PartyReferenceDataDirectoryEntry"
+     }
+    }
+   ],
+   "reason": "Customer parties are represented here; the customer type value is inferred."
+  },
+  "Account": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "CurrentAccountFacility"
+    },
+    {
+     "vertex": "SavingsAccountFacility"
+    }
+   ],
+   "reason": "Both account facility types represent accounts held at the bank."
+  },
+  "Transaction": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "PaymentExecutionProcedure"
+    },
+    {
+     "vertex": "CardTransaction"
+    }
+   ],
+   "reason": "Executions and card transactions represent completed money movements."
+  },
+  "Device": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "AccessDevice"
+    }
+   ],
+   "reason": "AccessDevice represents the device used to act."
+  },
+  "IPAddress": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "NetworkAddress"
+    }
+   ],
+   "reason": "NetworkAddress represents network addresses."
+  },
+  "LoginEvent": {
+   "status": "approximate",
+   "sources": [
+    {
+     "vertex": "PartyAuthenticationAssessment"
+    }
+   ],
+   "reason": "An authentication assessment represents a sign-on or authentication."
+  },
+  "Beneficiary": {
+   "status": "approximate",
+   "sources": [
+    {
+     "vertex": "PartyReferenceDataDirectoryEntry",
+     "filter": {
+      "attribute": "partyType",
+      "op": "=",
+      "values": [
+       "Counterparty"
+      ],
+      "vertex": "PartyReferenceDataDirectoryEntry"
+     }
+    }
+   ],
+   "reason": "External recipients share the party vertex with customers; the type values are inferred."
+  },
+  "Card": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "IssuedDeviceAllocation",
+     "filter": {
+      "attribute": "issuedDeviceType",
+      "op": "in",
+      "values": [
+       "DebitCard",
+       "CreditCard"
+      ],
+      "vertex": "IssuedDeviceAllocation"
+     }
+    }
+   ],
+   "reason": "IssuedDeviceAllocation may represent bank-issued cards; device type values are inferred."
+  },
+  "Merchant": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "MerchantRelationship"
+    }
+   ],
+   "reason": "MerchantRelationship represents merchants."
+  },
+  "InvestigationCase": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "CustomerCaseProcedure"
+    }
+   ],
+   "reason": "Customer cases can represent investigations, but the case type values are inferred."
+  }
+ },
+ "relations": {
+  "OWNS": {
+   "status": "exact",
+   "paths": [
+    {
+     "start": "PartyReferenceDataDirectoryEntry",
+     "steps": [
+      "hasRelationshipPlan",
+      "planCoversFacility"
+     ],
+     "end": "CurrentAccountFacility",
+     "filter": {
+      "attribute": "partyType",
+      "op": "in",
+      "values": [
+       "Individual",
+       "Organisation"
+      ],
+      "vertex": "PartyReferenceDataDirectoryEntry"
+     }
+    },
+    {
+     "start": "PartyReferenceDataDirectoryEntry",
+     "steps": [
+      "hasRelationshipPlan",
+      "planCoversFacility"
+     ],
+     "end": "SavingsAccountFacility",
+     "filter": {
+      "attribute": "partyType",
+      "op": "in",
+      "values": [
+       "Individual",
+       "Organisation"
+      ],
+      "vertex": "PartyReferenceDataDirectoryEntry"
+     }
+    }
+   ],
+   "reason": "Party relationship plans cover account facilities."
+  },
+  "INITIATED": {
+   "status": "approximate",
+   "paths": [
+    {
+     "start": "CurrentAccountFacility",
+     "steps": [
+      "reverse_executionDebitsFacility"
+     ],
+     "end": "PaymentExecutionProcedure"
+    },
+    {
+     "start": "SavingsAccountFacility",
+     "steps": [
+      "reverse_executionDebitsFacility"
+     ],
+     "end": "PaymentExecutionProcedure"
+    },
+    {
+     "start": "CurrentAccountFacility",
+     "steps": [
+      "reverse_issuedDeviceOnFacility",
+      "reverse_cardTransactionUsesDevice"
+     ],
+     "end": "CardTransaction"
+    }
+   ],
+   "reason": "Executions identify debited facilities; card transactions can be linked to an account through its issued card."
+  },
+  "PAYS_TO_ACCOUNT": {
+   "status": "exact",
+   "paths": [
+    {
+     "start": "PaymentExecutionProcedure",
+     "steps": [
+      "executionCreditsFacility"
+     ],
+     "end": "CurrentAccountFacility"
+    },
+    {
+     "start": "PaymentExecutionProcedure",
+     "steps": [
+      "executionCreditsFacility"
+     ],
+     "end": "SavingsAccountFacility"
+    }
+   ],
+   "reason": "Payment executions link to credited account facilities."
+  },
+  "PAYS": {
+   "status": "approximate",
+   "paths": [
+    {
+     "start": "PaymentExecutionProcedure",
+     "steps": [
+      "executionCreditsCounterparty"
+     ],
+     "end": "PartyReferenceDataDirectoryEntry",
+     "filter": {
+      "attribute": "partyType",
+      "op": "=",
+      "values": [
+       "Counterparty"
+      ],
+      "vertex": "PartyReferenceDataDirectoryEntry"
+     }
+    }
+   ],
+   "reason": "Executions link to counterparty parties, which may include external recipients."
+  },
+  "FROM_DEVICE": {
+   "status": "approximate",
+   "paths": [
+    {
+     "start": "PaymentExecutionProcedure",
+     "steps": [
+      "executesOrder",
+      "orderAuthenticatedBy",
+      "authenticationUsedDevice"
+     ],
+     "end": "AccessDevice"
+    }
+   ],
+   "reason": "Payment executions can be traced through their order and authentication to an access device."
+  },
+  "FROM_IP": {
+   "status": "approximate",
+   "paths": [
+    {
+     "start": "PaymentExecutionProcedure",
+     "steps": [
+      "executesOrder",
+      "orderAuthenticatedBy",
+      "authenticationFromAddress"
+     ],
+     "end": "NetworkAddress"
+    }
+   ],
+   "reason": "Payment executions can be traced through their order and authentication to a network address."
+  },
+  "AT": {
+   "status": "exact",
+   "paths": [
+    {
+     "start": "CardTransaction",
+     "steps": [
+      "cardTransactionAtMerchant"
+     ],
+     "end": "MerchantRelationship"
+    }
+   ],
+   "reason": "Card transactions link directly to merchants."
+  },
+  "VIA": {
+   "status": "approximate",
+   "paths": [
+    {
+     "start": "CardTransaction",
+     "steps": [
+      "cardTransactionUsesDevice"
+     ],
+     "end": "IssuedDeviceAllocation",
+     "filter": {
+      "attribute": "issuedDeviceType",
+      "op": "in",
+      "values": [
+       "DebitCard",
+       "CreditCard"
+      ],
+      "vertex": "IssuedDeviceAllocation"
+     }
+    }
+   ],
+   "reason": "Card transactions link to issued device allocations, which may represent cards."
+  },
+  "HOLDS": {
+   "status": "approximate",
+   "paths": [
+    {
+     "start": "CurrentAccountFacility",
+     "steps": [
+      "reverse_issuedDeviceOnFacility"
+     ],
+     "end": "IssuedDeviceAllocation",
+     "filter": {
+      "attribute": "issuedDeviceType",
+      "op": "in",
+      "values": [
+       "DebitCard",
+       "CreditCard"
+      ],
+      "vertex": "IssuedDeviceAllocation"
+     }
+    }
+   ],
+   "reason": "Issued device allocations link to current accounts and may represent cards."
+  },
+  "LOGGED_IN": {
+   "status": "approximate",
+   "paths": [
+    {
+     "start": "PartyAuthenticationAssessment",
+     "steps": [
+      "authenticationForParty",
+      "hasRelationshipPlan",
+      "planCoversFacility"
+     ],
+     "end": "CurrentAccountFacility",
+     "filter": {
+      "attribute": "partyType",
+      "op": "in",
+      "values": [
+       "Individual",
+       "Organisation"
+      ],
+      "vertex": "PartyReferenceDataDirectoryEntry"
+     }
+    },
+    {
+     "start": "PartyAuthenticationAssessment",
+     "steps": [
+      "authenticationForParty",
+      "hasRelationshipPlan",
+      "planCoversFacility"
+     ],
+     "end": "SavingsAccountFacility",
+     "filter": {
+      "attribute": "partyType",
+      "op": "in",
+      "values": [
+       "Individual",
+       "Organisation"
+      ],
+      "vertex": "PartyReferenceDataDirectoryEntry"
+     }
+    }
+   ],
+   "reason": "The authenticated party can be followed to relationship plans and their covered accounts."
+  },
+  "LOGIN_FROM_DEVICE": {
+   "status": "exact",
+   "paths": [
+    {
+     "start": "PartyAuthenticationAssessment",
+     "steps": [
+      "authenticationUsedDevice"
+     ],
+     "end": "AccessDevice"
+    }
+   ],
+   "reason": "Authentication assessments link directly to access devices."
+  },
+  "LOGIN_FROM_IP": {
+   "status": "exact",
+   "paths": [
+    {
+     "start": "PartyAuthenticationAssessment",
+     "steps": [
+      "authenticationFromAddress"
+     ],
+     "end": "NetworkAddress"
+    }
+   ],
+   "reason": "Authentication assessments link directly to network addresses."
+  },
+  "INVESTIGATED_IN": {
+   "status": "exact",
+   "paths": [
+    {
+     "start": "CurrentAccountFacility",
+     "steps": [
+      "reverse_caseConcernsFacility"
+     ],
+     "end": "CustomerCaseProcedure",
+     "filter": null
+    },
+    {
+     "start": "SavingsAccountFacility",
+     "steps": [
+      "reverse_caseConcernsFacility"
+     ],
+     "end": "CustomerCaseProcedure",
+     "filter": null
+    }
+   ],
+   "reason": "Customer cases can concern account facilities; investigation case types need confirmation."
+  }
+ },
+ "attributes": {
+  "Transaction.amount": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "PaymentExecutionProcedure",
+     "attribute": "paymentExecutionAmount",
+     "transform": "none"
+    },
+    {
+     "vertex": "CardTransaction",
+     "attribute": "cardTransactionAmount",
+     "transform": "none"
+    }
+   ],
+   "reason": "Both sources provide transaction amounts."
+  },
+  "Transaction.timestamp": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "PaymentExecutionProcedure",
+     "attribute": "paymentExecutionDateTime",
+     "transform": "datetime"
+    },
+    {
+     "vertex": "CardTransaction",
+     "attribute": "cardTransactionDateTime",
+     "transform": "datetime"
+    }
+   ],
+   "reason": "Both sources provide transaction date and time."
+  },
+  "Transaction.channel": {
+   "status": "exact",
+   "reason": "paymentMechanismType for payments; card entry mode for card transactions",
+   "sources": [
+    {
+     "vertex": "PaymentExecutionProcedure",
+     "attribute": "paymentMechanismType",
+     "transform": "code",
+     "values": {
+      "InternetBanking": "online",
+      "MobileBanking": "online",
+      "OpenBankingAPI": "online",
+      "Branch": "branch",
+      "*": "other"
+     }
+    },
+    {
+     "vertex": "CardTransaction",
+     "attribute": "posEntryMode",
+     "transform": "code",
+     "values": {
+      "81": "online",
+      "10": "online",
+      "*": "card_present"
+     }
+    }
+   ]
+  },
+  "Account.open_date": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "CurrentAccountFacility",
+     "attribute": "facilityStartDate",
+     "transform": "datetime"
+    },
+    {
+     "vertex": "SavingsAccountFacility",
+     "attribute": "facilityStartDate",
+     "transform": "datetime"
+    }
+   ],
+   "reason": "Facility start date represents account opening."
+  },
+  "Account.status": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "CurrentAccountFacility",
+     "attribute": "facilityStatus",
+     "transform": "none"
+    },
+    {
+     "vertex": "SavingsAccountFacility",
+     "attribute": "facilityStatus",
+     "transform": "none"
+    }
+   ],
+   "reason": "Facility status describes account status."
+  },
+  "Account.kyc_score": {
+   "status": "approximate",
+   "sources": [
+    {
+     "vertex": "PartyReferenceDataDirectoryEntry",
+     "attribute": "partyRiskRating",
+     "transform": "code",
+     "filter": {
+      "attribute": "partyType",
+      "op": "in",
+      "values": [
+       "Individual",
+       "Organisation"
+      ],
+      "vertex": "PartyReferenceDataDirectoryEntry"
+     }
+    }
+   ],
+   "reason": "This is a party-level rating, not an account-level numeric score."
+  },
+  "Person.anonymized_ssn_hash": {
+   "status": "approximate",
+   "sources": [
+    {
+     "vertex": "PartyReferenceDataDirectoryEntry",
+     "attribute": "partyIdentificationHash",
+     "transform": "none",
+     "filter": {
+      "vertex": "PartyReferenceDataDirectoryEntry",
+      "attribute": "partyIdentificationType",
+      "op": "in",
+      "values": [
+       "SSN",
+       "national identity number"
+      ]
+     }
+    }
+   ],
+   "reason": "The identification hash is suitable only when its type is a national identity number."
+  },
+  "Person.kyc_verified_at": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "PartyReferenceDataDirectoryEntry",
+     "attribute": "partyVerificationDate",
+     "transform": "datetime",
+     "filter": {
+      "attribute": "partyType",
+      "op": "in",
+      "values": [
+       "Individual",
+       "Organisation"
+      ],
+      "vertex": "PartyReferenceDataDirectoryEntry"
+     }
+    }
+   ],
+   "reason": "Party verification date records identity verification."
+  },
+  "Beneficiary.bank_identifier": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "PartyReferenceDataDirectoryEntry",
+     "attribute": "partyBankIdentifierCode",
+     "transform": "none",
+     "filter": {
+      "attribute": "partyType",
+      "op": "=",
+      "values": [
+       "Counterparty"
+      ],
+      "vertex": "PartyReferenceDataDirectoryEntry"
+     }
+    }
+   ],
+   "reason": "The party bank identifier code identifies the recipient's bank."
+  },
+  "Beneficiary.name_hash": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "PartyReferenceDataDirectoryEntry",
+     "attribute": "partyLegalNameHash",
+     "transform": "none",
+     "filter": {
+      "attribute": "partyType",
+      "op": "=",
+      "values": [
+       "Counterparty"
+      ],
+      "vertex": "PartyReferenceDataDirectoryEntry"
+     }
+    }
+   ],
+   "reason": "The legal name hash represents a beneficiary name hash."
+  },
+  "InvestigationCase.status": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "CustomerCaseProcedure",
+     "attribute": "customerCaseStatus",
+     "transform": "none"
+    }
+   ],
+   "reason": "Case status is available, but investigation case types need confirmation."
+  },
+  "IPAddress.anonymizer": {
+   "status": "approximate",
+   "sources": [
+    {
+     "vertex": "NetworkAddress",
+     "attribute": "ipAnonymizerType",
+     "transform": "code"
+    }
+   ],
+   "reason": "The anonymizer type can indicate proxy, VPN, or Tor use but may need code translation."
+  },
+  "account_under_investigation": {
+   "status": "exact",
+   "reason": "an open case concerning the account",
+   "sources": [
+    {
+     "vertex": "CustomerCaseProcedure",
+     "attribute": "customerCaseStatus",
+     "filter": {
+      "attribute": "customerCaseStatus",
+      "op": "in",
+      "values": [
+       "Open",
+       "InProgress"
+      ]
+     }
+    }
+   ]
+  }
+ },
+ "needs_review": [
+  "Confirm the partyType value for bank customers; \"customer\" is inferred.",
+  "Confirm partyType values that distinguish external beneficiaries from bank customers; \"beneficiary\" and \"external\" are inferred.",
+  "Confirm issuedDeviceType values that identify bank-issued cards; the listed card values are inferred.",
+  "Confirm customerCaseType values that identify fraud or other investigation cases; the listed values are inferred.",
+  "Confirm partyIdentificationType values for national identity numbers; \"SSN\" and \"national identity number\" are inferred.",
+  "Confirm how partyRiskRating codes map to numeric KYC scores; it is party-level and may not be numeric.",
+  "Confirm posEntryMode code meanings before mapping them to transaction channels.",
+  "Confirm the customerCaseStatus value meaning an open case; the account-under-investigation mapping assumes an open investigation case."
+ ],
+ "proposal": {
+  "model": "gpt-6-luna",
+  "attempts": 2,
+  "tokens": 20709,
+  "seconds": 94.6,
+  "problems": []
+ },
+ "review": {
+  "by": "Claude (reviewer for the demo; the bank's data owner reviews for real)",
+  "at": "2026-10-31",
+  "changes": [
+   {
+    "target": "concepts:Person",
+    "why": "partyType values from the bank's data dictionary: customers are Individual or Organisation."
+   },
+   {
+    "target": "relations:OWNS",
+    "why": "Same customer partyType values as Person."
+   },
+   {
+    "target": "relations:LOGGED_IN",
+    "why": "Same customer partyType values as Person."
+   },
+   {
+    "target": "attributes:Account.kyc_score",
+    "why": "Same customer partyType values."
+   },
+   {
+    "target": "attributes:Person.kyc_verified_at",
+    "why": "Same customer partyType values."
+   },
+   {
+    "target": "concepts:Beneficiary",
+    "why": "External payees are directory entries with partyType = Counterparty."
+   },
+   {
+    "target": "relations:PAYS",
+    "why": "Counterparty, as for Beneficiary."
+   },
+   {
+    "target": "attributes:Beneficiary.bank_identifier",
+    "why": "Counterparty, as for Beneficiary."
+   },
+   {
+    "target": "attributes:Beneficiary.name_hash",
+    "why": "Counterparty, as for Beneficiary."
+   },
+   {
+    "target": "concepts:Card",
+    "why": "issuedDeviceType values for cards are DebitCard and CreditCard in this bank's data."
+   },
+   {
+    "target": "relations:HOLDS",
+    "why": "Card values as above."
+   },
+   {
+    "target": "relations:VIA",
+    "why": "Card values as above."
+   },
+   {
+    "target": "concepts:InvestigationCase",
+    "why": "Every CustomerCaseProcedure is a case a person opened; no type filter is needed."
+   },
+   {
+    "target": "relations:INVESTIGATED_IN",
+    "why": "As for InvestigationCase."
+   },
+   {
+    "target": "attributes:InvestigationCase.status",
+    "why": "As for InvestigationCase."
+   },
+   {
+    "target": "attributes:account_under_investigation",
+    "why": "Open cases are customerCaseStatus Open or InProgress."
+   },
+   {
+    "target": "attributes:Transaction.channel",
+    "why": "Code tables from the bank: internet, mobile and API payments are online; POS entry modes 81 and 10 are e-commerce."
+   }
+  ]
+ }
+}

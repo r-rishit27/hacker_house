@@ -1,0 +1,347 @@
+{
+ "bank": "Bank_ISO20022",
+ "schema_sha256": "34ace025cb48cb0edd96f0b5bc08f1bffb2e2b0ccf505c94b522ffcc2e854641",
+ "proposed_by": "gpt-6-luna",
+ "concepts": {
+  "Person": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "Pty",
+     "filter": {
+      "vertex": "Pty",
+      "attribute": "IsCstmr",
+      "op": "=",
+      "values": [
+       "true"
+      ]
+     }
+    }
+   ],
+   "reason": "Pty represents parties; IsCstmr identifies bank customers."
+  },
+  "Account": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "CshAcct"
+    }
+   ],
+   "reason": "CshAcct represents accounts held at the bank."
+  },
+  "Transaction": {
+   "status": "approximate",
+   "sources": [
+    {
+     "vertex": "CdtTrfTxInf"
+    }
+   ],
+   "reason": "Credit transfer records include settlement fields, but the schema does not confirm execution."
+  },
+  "Device": {
+   "status": "unmapped",
+   "sources": [],
+   "reason": "No device vertex or attribute is present."
+  },
+  "IPAddress": {
+   "status": "unmapped",
+   "sources": [],
+   "reason": "No IP address vertex or attribute is present."
+  },
+  "LoginEvent": {
+   "status": "unmapped",
+   "sources": [],
+   "reason": "No sign-on or authentication records are present."
+  },
+  "Beneficiary": {
+   "status": "approximate",
+   "sources": [
+    {
+     "vertex": "Pty",
+     "filter": {
+      "vertex": "Pty",
+      "attribute": "IsCstmr",
+      "op": "=",
+      "values": [
+       "false"
+      ]
+     }
+    }
+   ],
+   "reason": "Creditors are parties, but the schema does not distinguish saved payees from other non-customer parties."
+  },
+  "Card": {
+   "status": "unmapped",
+   "sources": [],
+   "reason": "No card vertex or attribute is present."
+  },
+  "Merchant": {
+   "status": "unmapped",
+   "sources": [],
+   "reason": "No merchant vertex or attribute is present."
+  },
+  "InvestigationCase": {
+   "status": "unmapped",
+   "sources": [],
+   "reason": "No investigation case vertex or attribute is present."
+  }
+ },
+ "relations": {
+  "OWNS": {
+   "status": "exact",
+   "paths": [
+    {
+     "start": "Pty",
+     "steps": [
+      "CshAcct_Ownr"
+     ],
+     "end": "CshAcct",
+     "filter": {
+      "vertex": "Pty",
+      "attribute": "IsCstmr",
+      "op": "=",
+      "values": [
+       "true"
+      ]
+     }
+    }
+   ],
+   "reason": "The ownership edge links customer parties to accounts."
+  },
+  "INITIATED": {
+   "status": "approximate",
+   "paths": [
+    {
+     "start": "CshAcct",
+     "steps": [
+      "reverse_CdtTrfTxInf_DbtrAcct"
+     ],
+     "end": "CdtTrfTxInf"
+    }
+   ],
+   "reason": "The debtor-account edge identifies the account the transfer was instructed from; execution is not confirmed."
+  },
+  "PAYS_TO_ACCOUNT": {
+   "status": "approximate",
+   "paths": [
+    {
+     "start": "CdtTrfTxInf",
+     "steps": [
+      "CdtTrfTxInf_CdtrAcct"
+     ],
+     "end": "CshAcct"
+    }
+   ],
+   "reason": "The creditor-account edge exists, but the schema does not establish that the account is held at this bank."
+  },
+  "PAYS": {
+   "status": "approximate",
+   "paths": [
+    {
+     "start": "CdtTrfTxInf",
+     "steps": [
+      "CdtTrfTxInf_Cdtr"
+     ],
+     "end": "Pty",
+     "filter": {
+      "vertex": "Pty",
+      "attribute": "IsCstmr",
+      "op": "=",
+      "values": [
+       "false"
+      ]
+     }
+    }
+   ],
+   "reason": "The actual creditor party is linked; the schema does not establish that every creditor is an external beneficiary."
+  },
+  "FROM_DEVICE": {
+   "status": "unmapped",
+   "paths": [],
+   "reason": "No device data or linking edge is present."
+  },
+  "FROM_IP": {
+   "status": "unmapped",
+   "paths": [],
+   "reason": "No IP address data or linking edge is present."
+  },
+  "AT": {
+   "status": "unmapped",
+   "paths": [],
+   "reason": "No merchant data or linking edge is present."
+  },
+  "VIA": {
+   "status": "unmapped",
+   "paths": [],
+   "reason": "No card data or linking edge is present."
+  },
+  "HOLDS": {
+   "status": "unmapped",
+   "paths": [],
+   "reason": "No card vertex is present."
+  },
+  "LOGGED_IN": {
+   "status": "unmapped",
+   "paths": [],
+   "reason": "No login events or login-to-account edge is present."
+  },
+  "LOGIN_FROM_DEVICE": {
+   "status": "unmapped",
+   "paths": [],
+   "reason": "No login events or device data is present."
+  },
+  "LOGIN_FROM_IP": {
+   "status": "unmapped",
+   "paths": [],
+   "reason": "No login events or IP address data is present."
+  },
+  "INVESTIGATED_IN": {
+   "status": "unmapped",
+   "paths": [],
+   "reason": "AMLAlrtInd is an alert indicator, not an investigation case."
+  }
+ },
+ "attributes": {
+  "Transaction.amount": {
+   "status": "approximate",
+   "sources": [
+    {
+     "vertex": "CdtTrfTxInf",
+     "attribute": "IntrBkSttlmAmt",
+     "transform": "none"
+    }
+   ],
+   "reason": "Settlement amount is available, but the transfer record is not confirmed executed."
+  },
+  "Transaction.timestamp": {
+   "status": "approximate",
+   "sources": [
+    {
+     "vertex": "CdtTrfTxInf",
+     "attribute": "IntrBkSttlmDt",
+     "transform": "datetime"
+    }
+   ],
+   "reason": "Settlement date is available, but time of day is not indicated."
+  },
+  "Transaction.channel": {
+   "status": "unmapped",
+   "sources": [],
+   "reason": "No transaction channel attribute is present."
+  },
+  "Account.open_date": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "CshAcct",
+     "attribute": "OpngDt",
+     "transform": "datetime"
+    }
+   ],
+   "reason": "OpngDt gives the account opening date."
+  },
+  "Account.status": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "CshAcct",
+     "attribute": "Sts",
+     "transform": "none"
+    }
+   ],
+   "reason": "Sts records account status."
+  },
+  "Account.kyc_score": {
+   "status": "unmapped",
+   "sources": [],
+   "reason": "No account-level KYC score is present."
+  },
+  "Person.anonymized_ssn_hash": {
+   "status": "approximate",
+   "sources": [
+    {
+     "vertex": "PrvtId",
+     "attribute": "Id_Hash",
+     "transform": "none"
+    }
+   ],
+   "reason": "An identity hash exists, but its scheme is not identified as a national identity number."
+  },
+  "Person.kyc_verified_at": {
+   "status": "unmapped",
+   "sources": [],
+   "reason": "No identity verification timestamp is present."
+  },
+  "Beneficiary.bank_identifier": {
+   "status": "approximate",
+   "sources": [
+    {
+     "vertex": "BranchAndFinInstnId",
+     "attribute": "FinInstnId_BICFI",
+     "transform": "none"
+    },
+    {
+     "vertex": "BranchAndFinInstnId",
+     "attribute": "FinInstnId_ClrSysMmbId_MmbId",
+     "transform": "none"
+    }
+   ],
+   "reason": "Creditor-agent bank identifiers are present, but are not attributes of the creditor party itself."
+  },
+  "Beneficiary.name_hash": {
+   "status": "approximate",
+   "sources": [
+    {
+     "vertex": "Pty",
+     "attribute": "Nm_Hash",
+     "transform": "none",
+     "filter": {
+      "vertex": "Pty",
+      "attribute": "IsCstmr",
+      "op": "=",
+      "values": [
+       "false"
+      ]
+     }
+    }
+   ],
+   "reason": "A party name hash is available for non-customer parties, which may include but are not limited to beneficiaries."
+  },
+  "InvestigationCase.status": {
+   "status": "unmapped",
+   "sources": [],
+   "reason": "No investigation case or case status is present."
+  },
+  "IPAddress.anonymizer": {
+   "status": "unmapped",
+   "sources": [],
+   "reason": "No IP address or anonymizer indicator is present."
+  },
+  "account_under_investigation": {
+   "status": "approximate",
+   "sources": [
+    {
+     "vertex": "CshAcct",
+     "attribute": "AMLAlrtInd",
+     "transform": "yes_no"
+    }
+   ],
+   "reason": "AMLAlrtInd is an alert flag and may signal investigation, but is not a case record."
+  }
+ },
+ "needs_review": [
+  "Confirm that Pty.IsCstmr uses true and false for customer and non-customer parties.",
+  "Confirm that CdtTrfTxInf records completed transfers rather than payment instructions; no execution-status field is shown.",
+  "Confirm whether CdtTrfTxInf_CdtrAcct points only to accounts held at this bank.",
+  "Confirm that PrvtId.Id_Hash represents a national identity number and identify its scheme.",
+  "Confirm whether FinInstnId_BICFI or FinInstnId_ClrSysMmbId_MmbId should populate the beneficiary bank identifier.",
+  "Confirm that CshAcct.AMLAlrtInd is a suitable proxy for an account currently under investigation."
+ ],
+ "proposal": {
+  "model": "gpt-6-luna",
+  "attempts": 1,
+  "tokens": 7958,
+  "seconds": 50.7,
+  "problems": []
+ }
+}

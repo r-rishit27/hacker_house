@@ -1,0 +1,2 @@
+case_id,opened_at,trigger_type,trigger_text,flagged_txn_id,card_id,customer_id,risk_score
+ISO-001,2026-10-01 09:00:00,risk_score,Real-time model scored the transfer 0.71.,UETR-0104,A0,P0,0.71

@@ -15,6 +15,9 @@
 #   ./run.sh user NAME ROLE   add a sign-in (analyst | team_lead | fraud_manager | regulator); asks for the password
 #   ./run.sh snapshot         export the read-only regulator snapshot -> regulator_snapshot.html
 #   ./run.sh setup            install frontend packages (backend uses the Python already on this machine)
+#   ./run.sh onboard CMD ...  onboard a new bank's schema (docs/ONBOARDING.md):
+#                               propose FILE.gsql | build BANK | capabilities BANK | score BANK | dryrun BANK
+#                               | approve BANK --token TOKEN
 #
 # Open http://localhost:3000 and sign in. Analysts, team leads and fraud managers land on the
 # console; regulators on the regulator overview. Ask Sentinel is the logo button, bottom right.
@@ -206,6 +209,7 @@ case "${1:-start}" in
   user)     shift; cmd_user "$@" ;;
   snapshot) cmd_snapshot ;;
   setup)    cmd_setup ;;
-  -h|--help|help) sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//' ;;
+  onboard)  shift; (cd "$ROOT/backend" && "$PY" -m sentinel.onboarding "$@") ;;
+  -h|--help|help) sed -n '2,28p' "$0" | sed 's/^# \{0,1\}//' ;;
   *) fail "unknown command: $1 (try ./run.sh help)"; exit 1 ;;
 esac

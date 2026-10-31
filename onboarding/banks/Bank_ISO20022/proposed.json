@@ -1,0 +1,352 @@
+{
+ "bank": "Bank_ISO20022",
+ "schema_sha256": "34ace025cb48cb0edd96f0b5bc08f1bffb2e2b0ccf505c94b522ffcc2e854641",
+ "proposed_by": "gpt-6-luna",
+ "concepts": {
+  "Person": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "Pty",
+     "filter": {
+      "vertex": "Pty",
+      "attribute": "IsCstmr",
+      "op": "=",
+      "values": [
+       "true"
+      ]
+     }
+    }
+   ],
+   "reason": "Pty represents parties, with IsCstmr identifying bank customers."
+  },
+  "Account": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "CshAcct"
+    }
+   ],
+   "reason": "CshAcct represents cash accounts."
+  },
+  "Transaction": {
+   "status": "approximate",
+   "sources": [
+    {
+     "vertex": "CdtTrfTxInf"
+    }
+   ],
+   "reason": "Credit-transfer records describe transfers, but the schema does not establish that each was completed."
+  },
+  "Device": {
+   "status": "unmapped",
+   "sources": [],
+   "reason": "No device vertex or attribute is present."
+  },
+  "IPAddress": {
+   "status": "unmapped",
+   "sources": [],
+   "reason": "No network-address vertex or attribute is present."
+  },
+  "LoginEvent": {
+   "status": "unmapped",
+   "sources": [],
+   "reason": "No sign-on or authentication records are present."
+  },
+  "Beneficiary": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "Pty",
+     "filter": {
+      "vertex": "Pty",
+      "attribute": "IsCstmr",
+      "op": "=",
+      "values": [
+       "false"
+      ]
+     }
+    }
+   ],
+   "reason": "The creditor party can represent the external recipient; IsCstmr distinguishes noncustomers."
+  },
+  "Card": {
+   "status": "unmapped",
+   "sources": [],
+   "reason": "No card vertex or attribute is present."
+  },
+  "Merchant": {
+   "status": "unmapped",
+   "sources": [],
+   "reason": "No merchant vertex or attribute is present."
+  },
+  "InvestigationCase": {
+   "status": "unmapped",
+   "sources": [],
+   "reason": "No investigation-case vertex is present."
+  }
+ },
+ "relations": {
+  "OWNS": {
+   "status": "exact",
+   "paths": [
+    {
+     "start": "Pty",
+     "steps": [
+      "CshAcct_Ownr"
+     ],
+     "end": "CshAcct",
+     "filter": {
+      "vertex": "Pty",
+      "attribute": "IsCstmr",
+      "op": "=",
+      "values": [
+       "true"
+      ]
+     }
+    }
+   ],
+   "reason": "CshAcct_Ownr links parties to accounts; the customer filter selects bank customers."
+  },
+  "INITIATED": {
+   "status": "exact",
+   "paths": [
+    {
+     "start": "CshAcct",
+     "steps": [
+      "reverse_CdtTrfTxInf_DbtrAcct"
+     ],
+     "end": "CdtTrfTxInf"
+    }
+   ],
+   "reason": "The debtor-account edge identifies the account from which the transfer is debited."
+  },
+  "PAYS_TO_ACCOUNT": {
+   "status": "exact",
+   "paths": [
+    {
+     "start": "CdtTrfTxInf",
+     "steps": [
+      "CdtTrfTxInf_CdtrAcct"
+     ],
+     "end": "CshAcct"
+    }
+   ],
+   "reason": "The creditor-account edge identifies the account receiving the transfer."
+  },
+  "PAYS": {
+   "status": "exact",
+   "paths": [
+    {
+     "start": "CdtTrfTxInf",
+     "steps": [
+      "CdtTrfTxInf_Cdtr"
+     ],
+     "end": "Pty",
+     "filter": {
+      "vertex": "Pty",
+      "attribute": "IsCstmr",
+      "op": "=",
+      "values": [
+       "false"
+      ]
+     }
+    }
+   ],
+   "reason": "The creditor party is the recipient; the filter selects parties that are not bank customers."
+  },
+  "FROM_DEVICE": {
+   "status": "unmapped",
+   "paths": [],
+   "reason": "No device vertex or transaction-to-device path is present."
+  },
+  "FROM_IP": {
+   "status": "unmapped",
+   "paths": [],
+   "reason": "No IP address vertex or transaction-to-address path is present."
+  },
+  "AT": {
+   "status": "unmapped",
+   "paths": [],
+   "reason": "No merchant vertex or transaction-to-merchant path is present."
+  },
+  "VIA": {
+   "status": "unmapped",
+   "paths": [],
+   "reason": "No card vertex or transaction-to-card path is present."
+  },
+  "HOLDS": {
+   "status": "unmapped",
+   "paths": [],
+   "reason": "No card vertex or account-to-card path is present."
+  },
+  "LOGGED_IN": {
+   "status": "unmapped",
+   "paths": [],
+   "reason": "No login-event vertex or sign-on-to-account path is present."
+  },
+  "LOGIN_FROM_DEVICE": {
+   "status": "unmapped",
+   "paths": [],
+   "reason": "No login-event or device vertices and no connecting path are present."
+  },
+  "LOGIN_FROM_IP": {
+   "status": "unmapped",
+   "paths": [],
+   "reason": "No login-event or IP address vertices and no connecting path are present."
+  },
+  "INVESTIGATED_IN": {
+   "status": "unmapped",
+   "paths": [],
+   "reason": "AMLAlrtInd is an account alert flag, not a case vertex or account-to-case relation."
+  }
+ },
+ "attributes": {
+  "Transaction.amount": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "CdtTrfTxInf",
+     "attribute": "IntrBkSttlmAmt",
+     "transform": "none"
+    }
+   ],
+   "reason": "IntrBkSttlmAmt is the interbank settlement amount."
+  },
+  "Transaction.timestamp": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "CdtTrfTxInf",
+     "attribute": "AccptncDtTm",
+     "transform": "datetime"
+    }
+   ],
+   "reason": "AccptncDtTm provides an acceptance date-time with time of day."
+  },
+  "Transaction.channel": {
+   "status": "approximate",
+   "sources": [
+    {
+     "vertex": "PmtInf",
+     "attribute": "PmtMtd",
+     "transform": "code"
+    }
+   ],
+   "reason": "PmtMtd gives a coded payment method, which may not fully identify the channel."
+  },
+  "Account.open_date": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "CshAcct",
+     "attribute": "OpngDt",
+     "transform": "datetime"
+    }
+   ],
+   "reason": "OpngDt is the account opening date."
+  },
+  "Account.status": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "CshAcct",
+     "attribute": "Sts",
+     "transform": "code"
+    }
+   ],
+   "reason": "Sts records account status; its values may require a lookup."
+  },
+  "Account.kyc_score": {
+   "status": "unmapped",
+   "sources": [],
+   "reason": "No account-level KYC score is present."
+  },
+  "Person.anonymized_ssn_hash": {
+   "status": "approximate",
+   "sources": [
+    {
+     "vertex": "PrvtId",
+     "attribute": "Id_Hash",
+     "transform": "none"
+    }
+   ],
+   "reason": "Id_Hash is a hashed private identifier, but its scheme may not be a national identity number."
+  },
+  "Person.kyc_verified_at": {
+   "status": "unmapped",
+   "sources": [],
+   "reason": "No identity-verification date is present."
+  },
+  "Beneficiary.bank_identifier": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "BranchAndFinInstnId",
+     "attribute": "FinInstnId_BICFI",
+     "transform": "none"
+    },
+    {
+     "vertex": "BranchAndFinInstnId",
+     "attribute": "FinInstnId_ClrSysMmbId_MmbId",
+     "transform": "none"
+    }
+   ],
+   "reason": "The creditor agent provides the recipient bank's BIC or clearing-system member identifier."
+  },
+  "Beneficiary.name_hash": {
+   "status": "exact",
+   "sources": [
+    {
+     "vertex": "Pty",
+     "attribute": "Nm_Hash",
+     "transform": "none",
+     "filter": {
+      "vertex": "Pty",
+      "attribute": "IsCstmr",
+      "op": "=",
+      "values": [
+       "false"
+      ]
+     }
+    }
+   ],
+   "reason": "Nm_Hash is a hashed party name; the filter selects noncustomer parties."
+  },
+  "InvestigationCase.status": {
+   "status": "unmapped",
+   "sources": [],
+   "reason": "No investigation cases or case status attributes are present."
+  },
+  "IPAddress.anonymizer": {
+   "status": "unmapped",
+   "sources": [],
+   "reason": "No IP address or anonymizer indicator is present."
+  },
+  "account_under_investigation": {
+   "status": "approximate",
+   "sources": [
+    {
+     "vertex": "CshAcct",
+     "attribute": "AMLAlrtInd",
+     "transform": "yes_no"
+    }
+   ],
+   "reason": "AMLAlrtInd is an alert indicator, not confirmation of an investigation case."
+  }
+ },
+ "needs_review": [
+  "Pty.IsCstmr is BOOL; the true and false filter values are inferred from its name and should be confirmed.",
+  "Confirm that CdtTrfTxInf records represent completed transfers in this data, rather than only accepted payment instructions.",
+  "Confirm that PmtInf.PmtMtd is an adequate proxy for transaction channel.",
+  "Confirm that PrvtId.Id_Hash uses a national identity scheme before treating it as an anonymized SSN hash.",
+  "Confirm the code values and meanings for CshAcct.Sts and PmtInf.PmtMtd."
+ ],
+ "proposal": {
+  "model": "gpt-6-luna",
+  "attempts": 1,
+  "tokens": 8239,
+  "seconds": 44.1,
+  "problems": []
+ }
+}

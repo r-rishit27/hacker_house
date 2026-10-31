@@ -29,6 +29,20 @@ from sentinel.typologies.offline import build_answer
 ROOT = Path(__file__).resolve().parents[3]
 
 
+def bank_source(bank: str):
+    """An onboarded bank: its approved mapping (refused otherwise) over its own TigerGraph graph."""
+    import sys as _sys
+
+    _sys.path.insert(0, str(ROOT))
+    from etl import config as cfg
+    from sentinel.onboarding import adapter as A, review as R, schema as S
+
+    d = ROOT / "onboarding" / "banks" / bank
+    mapping = R.load_for_use(d)
+    return A.MappedTxnSource(S.load(d / "schema.gsql"), mapping,
+                             A.TigerGraphReader(cfg.connect(graphname=bank, verbose=False)), label=f"TigerGraph {bank} via approved mapping")
+
+
 def prior_cases(src, card: str, before: datetime) -> list[dict]:
     return src.prior_cases(card, before)
 
@@ -41,8 +55,12 @@ class InvalidAlert(ValueError):
     """The alert row itself is malformed; nothing is investigated."""
 
 
-def validate_alert(row: dict) -> None:
-    """Check an alert before any query runs, and say exactly what is wrong."""
+def validate_alert(row: dict, *, bank_ids: bool = False) -> None:
+    """Check an alert before any query runs, and say exactly what is wrong.
+
+    ``bank_ids``: an onboarded bank's own identifiers (``FT26000104``, ``CAF-0``) instead of GRAPH_GOA's numeric
+    transaction ids and ``C00000-K1`` cards; whether the account really holds the transaction is then checked
+    against the bank's graph when the case is opened."""
     from sentinel.domain.enums import TriggerType
 
     problems = []
@@ -55,10 +73,10 @@ def validate_alert(row: dict) -> None:
         problems.append(f"opened_at {row.get('opened_at')!r} is not a timestamp")
     if row.get("trigger_type") not in {t.value for t in TriggerType}:
         problems.append(f"trigger_type {row.get('trigger_type')!r} is not one of {[t.value for t in TriggerType]}")
-    if not str(row.get("flagged_txn_id", "")).isdigit():
+    if not bank_ids and not str(row.get("flagged_txn_id", "")).isdigit():
         problems.append(f"flagged_txn_id {row.get('flagged_txn_id')!r} is not a transaction id")
     card, cust = str(row.get("card_id", "")), str(row.get("customer_id", ""))
-    if card and cust and not card.startswith(cust + "-K"):
+    if not bank_ids and card and cust and not card.startswith(cust + "-K"):
         problems.append(f"card {card} does not belong to customer {cust}")
     if len(str(row.get("trigger_text", ""))) > 5000:
         problems.append("trigger_text is longer than 5,000 characters")
@@ -70,7 +88,9 @@ def run_case(row: dict, src: DuckTxnSource, *, use_model: bool, log: list | None
     from sentinel.typologies import decide as D
     from sentinel.typologies.audit import QueryRecorder, code_version, digest
 
-    validate_alert(row)
+    bank_ids = getattr(src, "string_ids", False)
+    validate_alert(row, bank_ids=bank_ids)
+    flagged = str(row["flagged_txn_id"]) if bank_ids else int(row["flagged_txn_id"])
     t0, calls0 = time.perf_counter(), src.calls
     started = datetime.now().isoformat(timespec="seconds")
     as_of = datetime.fromisoformat(row["opened_at"])
@@ -93,10 +113,10 @@ def run_case(row: dict, src: DuckTxnSource, *, use_model: bool, log: list | None
         src.prefetch_devices(recent, as_of - timedelta(days=180), as_of)
     priors = prior_cases(src, row["card_id"], as_of)
     d = decide(case_id=row["case_id"], trigger_type=row["trigger_type"], trigger_text=row.get("trigger_text", ""),
-               card_id=row["card_id"], flagged_txn_id=int(row["flagged_txn_id"]), as_of=as_of, src=src,
+               card_id=row["card_id"], flagged_txn_id=flagged, as_of=as_of, src=src,
                prior_cases=priors, use_model=use_model)
     ans = build_answer(d, case_id=row["case_id"], trigger=row["trigger_type"], card_id=row["card_id"],
-                       customer_id=row["customer_id"], flagged_txn_id=int(row["flagged_txn_id"]), as_of=as_of,
+                       customer_id=row["customer_id"], flagged_txn_id=flagged, as_of=as_of,
                        src=src, prior_cases=priors, tool_calls=src.calls - calls0,
                        latency_s=time.perf_counter() - t0)
     ring = next((h for h in d.hits if h.coordinated), None)
@@ -178,6 +198,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--pack", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--case")
+    ap.add_argument("--bank", help="an onboarded bank (onboarding/banks/<Bank>): its approved mapping over its own "
+                                   "TigerGraph graph; refused if the mapping is not approved")
     ap.add_argument("--source", choices=("graph", "lab"), default="graph",
                     help="graph = TigerGraph GRAPH_GOA, the source of truth; lab = the local DuckDB mirror (backtests)")
     ap.add_argument("--lab", default=str(ROOT / "data" / "lab.duckdb"))
@@ -189,7 +211,13 @@ def main(argv: list[str] | None = None) -> int:
     a = ap.parse_args(argv)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    if a.source == "graph":
+    if a.bank:
+        try:
+            src = bank_source(a.bank)
+        except Exception as exc:  # unapproved mapping or unreachable graph: fail closed, write nothing
+            print(f"FAILED: {a.bank}: {exc}. Nothing written.", file=sys.stderr)
+            return 2
+    elif a.source == "graph":
         from sentinel.typologies.tg import GraphUnavailable, TigerGraphTxnSource
         try:
             src = TigerGraphTxnSource()
@@ -210,7 +238,10 @@ def main(argv: list[str] | None = None) -> int:
         try:
             ans = run_case(row, src, use_model=not a.no_model, log=log, ledger=ledger)
             containment = ans.pop("_containment", None)  # not an answer-format field; written beside it
-            if a.source == "graph" and not a.no_write_back:
+            if a.bank:
+                ledger.append(row["case_id"], "graph.write_back", {"ok": False, "skipped": True, "reason":
+                              f"{a.bank}'s schema has no Sentinel case vertex; the answer file and this ledger are the record"})
+            elif a.source == "graph" and not a.no_write_back:
                 write_back(ans, row, src, actor=a.actor, ledger=ledger)
         except Exception as exc:  # fail closed: report, do not write a guess
             failed += 1
