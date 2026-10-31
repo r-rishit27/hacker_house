@@ -71,6 +71,13 @@ A five-minute tour:
 
 ## What is in it
 
+<img width="1600" height="651" alt="image" src="https://github.com/user-attachments/assets/bb11e5f1-c574-4fe3-ad3a-6af448a2b5cd" />
+
+
+<img width="1315" height="760" alt="image" src="https://github.com/user-attachments/assets/d8e60602-c5e6-4c96-9ddc-36bb894bc9f4" />
+
+
+
 | | |
 |---|---|
 | **Investigation on the graph** | 8 detectors for patterns nobody wrote down (structuring under a threshold, a device ring adopted by many cards, a known ring device returning, dormant cards waking, escalating charges, micro-charges, many cards paying one recipient, card testing). Rings are found by label propagation inside TigerGraph |
@@ -88,6 +95,9 @@ A five-minute tour:
 | **Restricted MCP tools** | Five read-only tools for an assistant or IDE: card history, device history, ring components, investigate an alert, verify the audit chain. No raw query, no write |
 
 ---
+
+<img width="1285" height="530" alt="image" src="https://github.com/user-attachments/assets/65e3ead7-3b0e-4d40-a992-c1e6ab9801b1" />
+
 
 ## Results
 
